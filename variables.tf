@@ -80,10 +80,15 @@ variable "node_groups_defaults" {
     node_gpus     = 0
     core_fraction = 100
     disk_type     = "network-ssd"
-    disk_size     = 64
+    disk_size     = 69
     preemptible   = false
     nat           = false
     ipv4          = true
     ipv6          = false
   }
+}
+variable "node_groups" {
+  description = "Kubernetes node groups map of maps..."
+  type        = any
+  default     = {}
 }

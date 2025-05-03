@@ -9,10 +9,25 @@ node_account_name       = "k8s-cluster-test-01-node-account"
 create_kms              = true
 
 node_groups = {
-  test_default = {
-    cores     = 2
-    memory    = 4
-    disk_size = 50
-    count     = 2
+  "yc-k8s-ng" = {
+    description = "Kubernetes node group with auto scaling"
+
+    auto_scale = {
+      min     = 1
+      max     = 3
+      initial = 1
+    }
+
+    instance_template = {
+      platform_id = "standard-v2"
+      resources = {
+        memory = 4 # GB
+        cores  = 2 # vCPU
+      }
+      boot_disk = {
+        type = "network-hdd"
+        size = 68 # GB
+      }
+    }
   }
 }

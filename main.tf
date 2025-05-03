@@ -1,5 +1,7 @@
 module "kube" {
   source                  = "./modules/kube"
+  node_groups_defaults    = var.node_groups_defaults
+  node_groups             = var.node_groups
   enable_outgoing_traffic = var.enable_outgoing_traffic
   cluster_name            = var.cluster_name
   network_id              = module.kube.k8s_network_id
@@ -30,30 +32,6 @@ module "kube" {
       duration   = "3h"
     }
   ]
-
-  node_groups = {
-    "yc-k8s-ng" = {
-      description = "Kubernetes node group with auto scaling"
-
-      auto_scale = {
-        min     = 1
-        max     = 3
-        initial = 1
-      }
-
-      instance_template = {
-        platform_id = "standard-v2"
-        resources = {
-          memory = 4 # GB
-          cores  = 2 # vCPU
-        }
-        boot_disk = {
-          type = "network-hdd"
-          size = 64 # GB
-        }
-      }
-    }
-  }
 }
 
 #     Modules for managed k8s

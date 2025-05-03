@@ -8,18 +8,27 @@ service_account_name    = "k8s-cluster-test-01-service-account"
 node_account_name       = "k8s-cluster-test-01-node-account"
 create_kms              = true
 
-node_groups_defaults = {
-  "test-nodes" = {
-    description = "Testing nodes (auto scale)"
+
+node_groups = {
+  "yc-k8s-ng" = {
+    description = "Kubernetes node group with auto scaling"
+
     auto_scale = {
       min     = 2
       max     = 4
       initial = 2
     }
-    node_cores  = 4
-    node_memory = 8
-    node_labels = {
-      environment = "test"
+
+    instance_template = {
+      platform_id = "standard-v2"
+      resources = {
+        memory = 4 # GB
+        cores  = 2 # vCPU
+      }
+      boot_disk = {
+        type = "network-hdd"
+        size = 69 # GB
+      }
     }
   }
 }
