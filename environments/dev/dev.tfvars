@@ -1,17 +1,16 @@
 master_zone             = "ru-central1-a"
 enable_outgoing_traffic = true
-cluster_name            = "k8s-cluster-test-01"
+cluster_name            = "k8s-cluster-dev-01"
 enable_cilium_policy    = true
 public_access           = true
 service_ipv4_range      = "172.20.0.0/16"
-service_account_name    = "k8s-cluster-test-01-service-account"
-node_account_name       = "k8s-cluster-test-01-node-account"
+service_account_name    = "k8s-cluster-dev-01-service-account"
+node_account_name       = "k8s-cluster-dev-01-node-account"
 create_kms              = true
 
 node_groups = {
-  "yc-k8s-ng" = {
+  "k8s-node-group-dev-01" = {
     description = "Kubernetes node group with auto scaling"
-
     auto_scale = {
       min     = 2
       max     = 4

@@ -9,9 +9,8 @@ node_account_name       = "k8s-cluster-prod-01-node-account"
 create_kms              = true
 
 node_groups = {
-  "yc-k8s-ng" = {
+  "k8s-node-group-prod-01" = {
     description = "Kubernetes node group with auto scaling"
-
     auto_scale = {
       min     = 2
       max     = 4

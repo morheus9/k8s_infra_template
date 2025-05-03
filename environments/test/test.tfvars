@@ -10,9 +10,8 @@ create_kms              = true
 
 
 node_groups = {
-  "yc-k8s-ng" = {
+  "k8s-node-group-test-01" = {
     description = "Kubernetes node group with auto scaling"
-
     auto_scale = {
       min     = 2
       max     = 4
