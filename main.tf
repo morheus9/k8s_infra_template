@@ -1,14 +1,15 @@
 module "kube" {
   source                  = "./modules/kube"
-  enable_outgoing_traffic = true
-  cluster_name            = "k8s-cluster-test-01"
+  enable_outgoing_traffic = var.enable_outgoing_traffic
+  cluster_name            = var.cluster_name
   network_id              = module.kube.k8s_network_id
-  enable_cilium_policy    = true
-  public_access           = true
-  service_ipv4_range      = "172.20.0.0/16"
-  service_account_name    = "k8s-cluster-test-01-service-account"
-  node_account_name       = "k8s-cluster-test-01-node-account"
-  create_kms              = true
+  enable_cilium_policy    = var.enable_cilium_policy
+  public_access           = var.public_access
+  service_ipv4_range      = var.service_ipv4_range
+  service_account_name    = var.service_account_name
+  node_account_name       = var.node_account_name
+  create_kms              = var.create_kms
+
   #cluster_version      = "1.28"
   #release_channel      = "REGULAR"
   #folder_id            = "b1g4cr5d305a2bsm2im0"
@@ -17,7 +18,7 @@ module "kube" {
 
   master_locations = [
     {
-      zone      = "ru-central1-a"
+      zone      = var.master_zone
       subnet_id = module.kube.k8s_subnet_ru_central1_a_id
     }
   ]

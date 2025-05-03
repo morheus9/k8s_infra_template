@@ -15,6 +15,8 @@ terraform {
       version = "> 3.3"
     }
   }
+  backend "s3" {
+  }
 }
 
 provider "local" {}

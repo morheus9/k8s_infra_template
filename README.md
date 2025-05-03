@@ -1,10 +1,9 @@
 # Terraform Template for Yandex Cloud Infrastructure
 
-This repository provides a Terraform template for deploying infrastructure on Yandex Cloud. It includes modules for creating and managing various resources, such as:
+This repository provides a Terraform config for deploying infrastructure for K8s on Yandex Cloud. 
+It includes modules for creating and managing various resources, such as:
 - Yandex Object Storage (S3)
-- Yandex Managed Service for Kubernetes (K8S)
-- Virtual Machines
-- Network Configuration
+- Yandex Managed K8S Service for Kubernetes
 
 ## Table of Contents
 
@@ -12,8 +11,8 @@ This repository provides a Terraform template for deploying infrastructure on Ya
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
-  - [S3 Bucket Creation](#s3-bucket-creation)
-  - [Creation of basic infrastructure modules](#creation-of-basic-infrastructure-modules)
+  - [S3 Backend Creation](#s3-backend-creation)
+  - [Creation of k8s](#creation-of-k8s)
   - [Deploying Nginx on Kubernetes and Getting the Public IP](#deploying-nginx-on-kubernetes-and-getting-the-public-ip)
 - [Variables](#variables)
 - [Examples](#examples)
@@ -47,17 +46,17 @@ yc init
 6.  **Terraform Provider Configuration:** Configure Terraform to use the Yandex Cloud provider. Create or edit the `~/.terraformrc` file with the following content:
 
 ```bash
-    cat > ~/.terraformrc <<EOF
-    provider_installation {
-      network_mirror {
-        url = "https://terraform-mirror.yandexcloud.net/"
-        include = ["registry.terraform.io/*/*"]
-      }
-      direct {
-        exclude = ["registry.terraform.io/*/*"]
-      }
+cat > ~/.terraformrc <<EOF
+  provider_installation {
+    network_mirror {
+      url = "https://terraform-mirror.yandexcloud.net/"
+      include = ["registry.terraform.io/*/*"]
     }
-    EOF
+    direct {
+      exclude = ["registry.terraform.io/*/*"]
+    }
+  }
+  EOF
 ```
 
 7.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources.
@@ -81,39 +80,40 @@ cd k8s_infra_template
 
 Before deploying the infrastructure, you need to configure the variables in the Terraform modules.
 
-1.  **Review Module Variables:** Check the variables defined in each module's `variables.tf` file (if exists) and the `README.md` for specifics.  Pay close attention to required variables.
-
 ## Usage
 
-### S3 Bucket Creation
+### S3 Backend Creation
 
 This module creates an S3 bucket in Yandex Object Storage for storing Terraform state or other data.
-
-1.  **Navigate to the S3 module directory:**
+- **Review Module Variables:**
+- **Navigate to the S3 module directory and create backet for backend:**
 
 ```bash
 cd modules/s3
-```
-
-2.  **Initialize Terraform:**
-
-```bash
 terraform init
+terraform plan -var-file=environments/dev/dev.tfvars
+terraform plan -var-file=environments/test/test.tfvars
+terraform plan -var-file=environments/prod/prod.tfvars
+
+# For dev
+terraform workspace new dev
+terraform apply -var-file=environments/dev/dev.tfvars -auto-approve
+# For test
+terraform workspace new test
+terraform apply -var-file=environments/test/test.tfvars -auto-approve
+# For prod
+terraform workspace new prod
+terraform apply -var-file=environments/prod/prod.tfvars -auto-approve
 ```
+- **Destroy backend !!!WARNING!!!**
+terraform workspace select dev
+terraform destroy -var-file=environments/dev/dev.tfvars
+terraform workspace select test
+terraform destroy -var-file=environments/test/test.tfvars
+terraform workspace select prod
+terraform destroy -var-file=environments/prod/prod.tfvars
 
-3.  **Plan the deployment:**
-
-```bash
-terraform plan
-```
-
-4.  **Apply the configuration:**
-
-```bash
-terraform apply
-```
-
-5.  **Export S3 Credentials:** After the deployment, export the credentials of your service account to allow access to the S3 bucket.
+- **Export S3 Credentials:** After the deployment, export the credentials of your service account to allow access to the S3 bucket.
 
 ```bash
 export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
@@ -124,33 +124,47 @@ export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
 
 This module deploys a Kubernetes cluster in Yandex Managed Service for Kubernetes.
 
-1.  **Navigate to the root directory:**
+1.  **Navigate to the root directory and Apply the configuration:**
 
 ```bash
-cd ..
+cd ../..
+
+terraform workspace new dev
+terraform workspace new test
+terraform workspace new prod
+
+# Before initializing the backend, you need to add editor rights to the accounts:
+sa-terraform-state-backend-dev
+sa-terraform-state-backend-test
+sa-terraform-state-backend-prod
+
+# dev
+terraform workspace select dev
+terraform init -backend-config=environments/dev/dev.tfbackend
+terraform plan -var-file=environments/dev/dev.tfvars
+terraform apply -var-file=environments/dev/dev.tfvars
+# test
+terraform workspace select test
+terraform init -backend-config=environments/test/test.tfbackend
+terraform plan -var-file=environments/dev/dev.tfvars
+terraform apply -var-file=environments/test/test.tfvars
+# prod
+terraform workspace select prod
+terraform init -backend-config=environments/prod/prod.tfbackend
+terraform plan -var-file=environments/dev/dev.tfvars
+terraform apply -var-file=environments/prod/prod.tfvars
 ```
 
-2.  **Initialize Terraform with reconfiguration (important after S3 creation):**
+2. **Connecting to the Kubernetes Cluster:**
 
 ```bash
-# Для dev
-terraform init -backend-config=backend/dev.tfbackend
-# Для test
-terraform init -backend-config=backend/test.tfbackend
-# Для prod
-terraform init -backend-config=backend/prod.tfbackend
-```
+terraform workspace select dev
+eval "$(terraform output -raw internal_cluster_cmd_str)"
 
-3.  **Apply the configuration:**
+terraform workspace select test
+eval "$(terraform output -raw internal_cluster_cmd_str)"
 
-```bash
-terraform plan
-terraform apply
-```
-
-5. **Connecting to the Kubernetes Cluster:**
-
-```bash
+terraform workspace select prod
 eval "$(terraform output -raw internal_cluster_cmd_str)"
 ```
 This configures `kubectl` to communicate with your Yandex Managed Kubernetes cluster.
@@ -258,8 +272,8 @@ terraform destroy -var-file="testing.tfvars"
 ```
 
 ## Resourses:
-- [Yandex Object Storage](https://yandex.cloud/ru/docs/storage)
-- [Yandex Managed Service for Kubernetes](https://yandex.cloud/ru/docs/managed-kubernetes)
 - [Setup terraform](https://yandex.cloud/ru/docs/tutorials/infrastructure-management/terraform-quickstart)
 - [Setup terraform backend](https://yandex.cloud/ru/docs/tutorials/infrastructure-management/terraform-state-storage)
+- [Yandex Managed k8s Service for Kubernetes](https://yandex.cloud/ru/docs/managed-kubernetes)
 - [K8s from terraform](https://yandex.cloud/ru/docs/managed-kubernetes/operations/kubernetes-cluster/kubernetes-cluster-create)
+- [Yandex Object Storage](https://yandex.cloud/ru/docs/storage)
