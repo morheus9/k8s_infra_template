@@ -13,11 +13,10 @@ node_groups = {
     description = "Kubernetes node group with auto scaling"
 
     auto_scale = {
-      min     = 1
-      max     = 3
-      initial = 1
+      min     = 2
+      max     = 4
+      initial = 2
     }
-
     instance_template = {
       platform_id = "standard-v2"
       resources = {
@@ -26,7 +25,7 @@ node_groups = {
       }
       boot_disk = {
         type = "network-hdd"
-        size = 68 # GB
+        size = 50 # GB
       }
     }
   }

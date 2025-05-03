@@ -18,7 +18,6 @@ node_groups = {
       max     = 4
       initial = 2
     }
-
     instance_template = {
       platform_id = "standard-v2"
       resources = {
@@ -27,7 +26,7 @@ node_groups = {
       }
       boot_disk = {
         type = "network-hdd"
-        size = 69 # GB
+        size = 50 # GB
       }
     }
   }

@@ -9,13 +9,24 @@ node_account_name       = "k8s-cluster-prod-01-node-account"
 create_kms              = true
 
 node_groups = {
-  prod = {
-    cores      = 4
-    memory     = 8
-    disk_size  = 100
-    count      = 3
-    auto_scale = true
-    min_nodes  = 3
-    max_nodes  = 10
+  "yc-k8s-ng" = {
+    description = "Kubernetes node group with auto scaling"
+
+    auto_scale = {
+      min     = 2
+      max     = 4
+      initial = 2
+    }
+    instance_template = {
+      platform_id = "standard-v2"
+      resources = {
+        memory = 4 # GB
+        cores  = 2 # vCPU
+      }
+      boot_disk = {
+        type = "network-hdd"
+        size = 50 # GB
+      }
+    }
   }
 }
