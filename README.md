@@ -106,13 +106,14 @@ terraform workspace new prod
 terraform apply -var-file=environments/prod/prod.tfvars -auto-approve
 ```
 - **Destroy backend !!!WARNING!!!**
+```bash
 terraform workspace select dev
 terraform destroy -var-file=environments/dev/dev.tfvars
 terraform workspace select test
 terraform destroy -var-file=environments/test/test.tfvars
 terraform workspace select prod
 terraform destroy -var-file=environments/prod/prod.tfvars
-
+```
 - **Export S3 Credentials:** After the deployment, export the credentials of your service account to allow access to the S3 bucket.
 
 ```bash
