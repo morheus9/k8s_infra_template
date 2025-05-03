@@ -232,32 +232,39 @@ terraform plan -var-file="testing.tfvars"
 K8s Cluster:
 ```terraform
 module "kube" {
-  source     = "./modules/kubernetes"
-  network_id = "enpmff6ah2bvi0k10j66"
+  source                  = "./modules/kube"
+  node_groups_defaults    = var.node_groups_defaults
+  node_groups             = var.node_groups
+  enable_outgoing_traffic = var.enable_outgoing_traffic
+  cluster_name            = var.cluster_name
+  network_id              = module.kube.k8s_network_id
+  enable_cilium_policy    = var.enable_cilium_policy
+  public_access           = var.public_access
+  service_ipv4_range      = var.service_ipv4_range
+  service_account_name    = var.service_account_name
+  node_account_name       = var.node_account_name
+  create_kms              = var.create_kms
+
+  #cluster_version      = "1.28"
+  #release_channel      = "REGULAR"
+  #folder_id            = "b1g4cr5d305a2bsm2im0"
+  #create_kms           = true
+  #cluster_ipv4_range   = "172.19.0.0/16"
 
   master_locations = [
     {
-      zone      = "ru-central1-a"
-      subnet_id = "e9b3k97pr2nh1i80as04"
-    },
-    {
-      zone      = "ru-central1-b"
-      subnet_id = "e2laaglsc7u99ur8c4j1"
-    },
-    {
-      zone      = "ru-central1-c"
-      subnet_id = "b0ckjm3olbpmk2t6c28o"
+      zone      = var.master_zone
+      subnet_id = module.kube.k8s_subnet_ru_central1_a_id
     }
   ]
 
-  node_groups = {
-    "yc-k8s-ng-01" = {
-      description = "Kubernetes nodes group 01"
-      fixed_scale = {
-        size = 2
-      }
+  master_maintenance_windows = [
+    {
+      day        = "monday"
+      start_time = "20:00"
+      duration   = "3h"
     }
-  }
+  ]
 }
 ```
 ## Clean Up
