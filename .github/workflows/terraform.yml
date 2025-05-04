@@ -56,7 +56,6 @@ jobs:
           }
           EOF
           echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
-          terraform providers
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
