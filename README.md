@@ -96,16 +96,24 @@ terraform init
 terraform plan -var-file=environments/dev/dev.tfvars
 terraform plan -var-file=environments/test/test.tfvars
 terraform plan -var-file=environments/prod/prod.tfvars
-
-# For dev
 terraform workspace new dev
-terraform apply -var-file=environments/dev/dev.tfvars -auto-approve
-# For test
 terraform workspace new test
-terraform apply -var-file=environments/test/test.tfvars -auto-approve
-# For prod
 terraform workspace new prod
+# For dev
+terraform workspace select dev
+terraform apply -var-file=environments/dev/dev.tfvars -auto-approve
+echo AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
+echo AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
+# For test
+terraform workspace select test
+terraform apply -var-file=environments/test/test.tfvars -auto-approve
+echo AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
+echo AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
+# For prod
+terraform workspace select prod
 terraform apply -var-file=environments/prod/prod.tfvars -auto-approve
+echo AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
+echo AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
 ```
 - **Destroy backend !!!WARNING!!!**
 ```bash
@@ -116,7 +124,7 @@ terraform destroy -var-file=environments/test/test.tfvars
 terraform workspace select prod
 terraform destroy -var-file=environments/prod/prod.tfvars
 ```
-- **Export S3 Credentials:** After the deployment, export the credentials of your service account to allow access to the S3 bucket.
+- **Export S3 Credentials:** After the deployment, export the credentials of your service account to allow access to the S3 bucket or add to github.
 
 ```bash
 export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)

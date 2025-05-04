@@ -25,7 +25,6 @@ resource "yandex_iam_service_account" "s3_user" {
 resource "yandex_iam_service_account_iam_binding" "bucket_access" {
   service_account_id = yandex_iam_service_account.s3_user.id
   role               = "storage.editor"
-
   members = [
     "serviceAccount:${yandex_iam_service_account.s3_user.id}"
   ]
