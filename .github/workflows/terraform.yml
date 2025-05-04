@@ -8,11 +8,10 @@ on:
       - main
 
 jobs:
-  terraform:
-    name: "Terraform Plan and Apply"
+  terraform_backend:
+    name: "Creating backend"
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -62,7 +61,7 @@ jobs:
       - name: Terraform Apply S3
         working-directory: ./modules/s3
         run: |
-          - name: Set up AWS credentials from S3 module output (optional)
+          - name: Set up AWS credentials from S3 module output
             run: |
               cd modules/s3
               terraform init
@@ -71,7 +70,11 @@ jobs:
               export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
               export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
               cd ../..
-
+  terraform_k8s:
+    name: "Creating backendqa"
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    steps:
       - name: Terraform Init
         working-directory: .
         run: |
