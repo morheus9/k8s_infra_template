@@ -9,7 +9,7 @@ on:
 
 jobs:
   terraform_backend:
-    name: "Creating backend"
+    name: "Terraform CI/CD"
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     steps:
@@ -21,56 +21,61 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      - name: Setup Yandex CLI
+      - name: Configure Terraform Yandex Mirror
         run: |
+          cat > ~/.terraformrc <<EOF
+          provider_installation {
+            network_mirror {
+              url = "https://terraform-mirror.yandexcloud.net/"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           echo "$HOME/bin" >> $GITHUB_PATH
+          source "$HOME/.bashrc"
 
       - name: Determine Environment
-        env:
-          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          if [ "$BRANCH_NAME" == "dev" ]; then
+          if [ "${{ github.ref_name }}" == "dev" ]; then
             echo "ENV=dev" >> $GITHUB_ENV
-          elif [ "$BRANCH_NAME" == "test" ]; then
+          elif [ "${{ github.ref_name }}" == "test" ]; then
             echo "ENV=test" >> $GITHUB_ENV
-          elif [ "$BRANCH_NAME" == "main" ]; then
+          elif [ "${{ github.ref_name }}" == "main" ]; then
             echo "ENV=prod" >> $GITHUB_ENV
           else
-            echo "Unsupported branch: $BRANCH_NAME"
+            echo "Unsupported branch: ${{ github.ref_name }}"
             exit 1
           fi
 
-      # Getting AWS keys
-      - name: Get AWS Credentials from SA
+      - name: Get AWS Credentials from Service Account
         env:
-          ENV: ${{ env.ENV }}
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
           IAM_TOKEN: ${{ secrets.YC_TOKEN }}
         run: |
-          # Установка Yandex CLI
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          exec -l $SHELL
-
-          # Определяем имя сервисного аккаунта на основе среды
-          case "$ENV" in
+          # Определяем имя сервисного аккаунта
+          case "${{ env.ENV }}" in
             dev) SA_NAME="sa-terraform-state-dev" ;;
             test) SA_NAME="sa-terraform-state-test" ;;
             prod) SA_NAME="sa-terraform-state-prod" ;;
-            *) echo "Unknown ENV: $ENV"; exit 1 ;;
+            *) echo "Unknown ENV"; exit 1 ;;
           esac
 
-          # Устанавливаем yc CLI
           yc config set token $IAM_TOKEN
 
           # Получаем ID сервисного аккаунта
           SA_ID=$(yc iam service-account get --name=$SA_NAME --folder-id=$FOLDER_ID --format json | jq -r .id)
-
           if [ -z "$SA_ID" ] || [ "$SA_ID" = "null" ]; then
             echo "Service account $SA_NAME not found"
             exit 1
           fi
-
           echo "Service Account ID: $SA_ID"
 
           # Проверяем существующие ключи
@@ -93,8 +98,10 @@ jobs:
 
       - name: Terraform Init
         working-directory: .
+        env:
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
         run: |
-          ls -la
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
