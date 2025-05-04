@@ -5,7 +5,7 @@ on:
     branches:
       - dev
       - test
-      - master
+      - main
 
 jobs:
   terraform:
@@ -75,13 +75,13 @@ jobs:
           terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
 
       - name: Terraform Apply
-        if: github.ref_name != 'master'
+        if: github.ref_name != 'main'
         working-directory: .
         run: |
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
 
       - name: Terraform Apply (Prod)
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         working-directory: .
         run: |
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/prod.tfvars
