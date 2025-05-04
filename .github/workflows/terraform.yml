@@ -48,7 +48,6 @@ jobs:
           }
           EOF
           echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
-          terraform providers
 
       - name: Terraform Apply
         working-directory: .
@@ -62,6 +61,7 @@ jobs:
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
+          terraform providers
           terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
           terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
