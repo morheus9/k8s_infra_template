@@ -34,7 +34,14 @@ jobs:
             exit 1
           fi
 
-      - name: Configure Terraform Yandex Mirror
+      - name: Terraform Apply
+        working-directory: .
+        env:
+          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+          TF_VAR_token: ${{ secrets.YC_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           cat > /tmp/.terraformrc <<EOF
           provider_installation {
@@ -48,20 +55,6 @@ jobs:
           }
           EOF
           echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
-          terraform init \
-            -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
-            -reconfigure
-          terraform providers
-
-      - name: Terraform Apply
-        working-directory: .
-        env:
-          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
-          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-          TF_VAR_token: ${{ secrets.YC_TOKEN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
