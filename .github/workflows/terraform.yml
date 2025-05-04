@@ -10,7 +10,7 @@ on:
 jobs:
   terraform_backend:
     name: "Terraform CI/CD"
-    runs-on: ubuntu-latest
+    runs-on: hashicorp/terraform:latest
     environment: ${{ github.ref_name }}
     steps:
       - name: Checkout repository
@@ -28,12 +28,6 @@ jobs:
             exit 1
           fi
 
-      - name: Configure AWS CLI for Yandex Cloud
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws --endpoint-url https://storage.yandexcloud.net s3 ls s3://terraform-state-backend-prod || echo "Bucket access check"
-
       - name: Terraform Apply
         working-directory: .
         env:
@@ -43,9 +37,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          sudo apt install snapd
-          sudo snap install terraform --classic
-          cat > /tmp/.terraformrc <<EOF
+          cat <<EOF >> ~/.terraformrc
           provider_installation {
             network_mirror {
               url = "https://terraform-mirror.yandexcloud.net/"
@@ -56,12 +48,9 @@ jobs:
             }
           }
           EOF
-          echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
-
-          terraform providers
           terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
           terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
