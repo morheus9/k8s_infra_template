@@ -71,7 +71,7 @@ jobs:
               export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
               cd ../..
   terraform_k8s:
-    name: "Creating backendqa"
+    name: "Creating k8s"
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     steps:
