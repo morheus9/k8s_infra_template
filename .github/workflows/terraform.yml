@@ -35,13 +35,6 @@ jobs:
           }
           EOF
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          echo "$HOME/bin" >> $GITHUB_PATH
-          exec -l $SHELL
-
       - name: Determine Environment
         run: |
           if [ "${{ github.ref_name }}" == "dev" ]; then
@@ -60,6 +53,9 @@ jobs:
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
           IAM_TOKEN: ${{ secrets.YC_TOKEN }}
         run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "$HOME/bin" >> $GITHUB_PATH
+          exec -l $SHELL
           # Определяем имя сервисного аккаунта
           case "${{ env.ENV }}" in
             dev) SA_NAME="sa-terraform-state-dev" ;;
