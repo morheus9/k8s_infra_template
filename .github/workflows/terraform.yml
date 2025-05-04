@@ -28,6 +28,12 @@ jobs:
             exit 1
           fi
 
+      - name: Configure AWS CLI for Yandex Cloud
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws --endpoint-url https://storage.yandexcloud.net s3 ls s3://terraform-state-backend-prod || echo "Bucket access check"
+
       - name: Terraform Apply
         working-directory: .
         env:
