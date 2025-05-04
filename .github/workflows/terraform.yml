@@ -40,7 +40,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y jq
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           echo "$HOME/bin" >> $GITHUB_PATH
-          source "$HOME/.bashrc"
+          exec -l $SHELL
 
       - name: Determine Environment
         run: |
