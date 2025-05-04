@@ -38,7 +38,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           sudo apt install snapd
-          snap install terraform --classic
+          sudo snap install terraform --classic
           cat > /tmp/.terraformrc <<EOF
           provider_installation {
             network_mirror {
