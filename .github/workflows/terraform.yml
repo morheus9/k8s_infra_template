@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
 
-      # 🔑 Новый шаг: Получение AWS ключей
+      # Getting AWS keys
       - name: Get AWS Credentials from SA
         env:
           ENV: ${{ env.ENV }}
@@ -91,10 +91,10 @@ jobs:
           echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
 
-      # Остальные шаги остаются без изменений
       - name: Terraform Init
         working-directory: .
         run: |
+          ls -la
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure

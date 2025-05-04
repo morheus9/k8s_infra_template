@@ -151,17 +151,17 @@ sa-terraform-state-backend-prod
 
 # dev
 terraform workspace select dev
-terraform init -backend-config=environments/dev/dev.tfbackend
+terraform init -backend-config=environments/dev/dev.tfbackend -reconfigure
 terraform plan -var-file=environments/dev/dev.tfvars
 terraform apply -var-file=environments/dev/dev.tfvars
 # test
 terraform workspace select test
-terraform init -backend-config=environments/test/test.tfbackend
+terraform init -backend-config=environments/test/test.tfbackend -reconfigure
 terraform plan -var-file=environments/dev/dev.tfvars
 terraform apply -var-file=environments/test/test.tfvars
 # prod
 terraform workspace select prod
-terraform init -backend-config=environments/prod/prod.tfbackend
+terraform init -backend-config=environments/prod/prod.tfbackend -reconfigure
 terraform plan -var-file=environments/dev/dev.tfvars
 terraform apply -var-file=environments/prod/prod.tfvars
 ```
