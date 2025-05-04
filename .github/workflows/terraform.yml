@@ -35,16 +35,17 @@ jobs:
           source ~/.bashrc
 
       - name: Determine Environment
-        id: env
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.ref_name }}" == "dev" ]; then
+          if [ "$BRANCH_NAME" == "dev" ]; then
             echo "ENV=dev" >> $GITHUB_ENV
-          elif [ "${{ github.ref_name }}" == "test" ]; then
+          elif [ "$BRANCH_NAME" == "test" ]; then
             echo "ENV=test" >> $GITHUB_ENV
-          elif [ "${{ github.ref_name }}" == "master" ]; then
+          elif [ "$BRANCH_NAME" == "master" ]; then
             echo "ENV=prod" >> $GITHUB_ENV
           else
-            echo "Unsupported branch"
+            echo "Unsupported branch: $BRANCH_NAME"
             exit 1
           fi
 
