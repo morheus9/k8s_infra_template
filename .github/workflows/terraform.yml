@@ -1,44 +1,87 @@
-name: Terraform CI/CD
+name: "Terraform Deploy"
 
 on:
   push:
     branches:
       - dev
-      - main
+      - test
+      - master
 
 jobs:
   terraform:
+    name: "Terraform Plan and Apply"
     runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: "1.11.4"
+          terraform_version: 1.6.0
+
+      - name: Setup Yandex CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Configure Environment Variables
+        run: |
+          echo "TF_VAR_token=${{ secrets.YC_TOKEN }}" >> ~/.bashrc
+          echo "TF_VAR_cloud_id=${{ secrets.YC_CLOUD_ID }}" >> ~/.bashrc
+          echo "TF_VAR_folder_id=${{ secrets.YC_FOLDER_ID }}" >> ~/.bashrc
+          source ~/.bashrc
 
       - name: Determine Environment
         id: env
         run: |
-          if [[ $GITHUB_REF == refs/heads/main ]]; then
+          if [ "${{ github.ref_name }}" == "dev" ]; then
+            echo "ENV=dev" >> $GITHUB_ENV
+          elif [ "${{ github.ref_name }}" == "test" ]; then
+            echo "ENV=test" >> $GITHUB_ENV
+          elif [ "${{ github.ref_name }}" == "master" ]; then
             echo "ENV=prod" >> $GITHUB_ENV
           else
-            echo "ENV=dev" >> $GITHUB_ENV
+            echo "Unsupported branch"
+            exit 1
           fi
 
-      - name: Terraform Init
+      - name: Set up AWS credentials from S3 module output (optional)
         run: |
-          cd ${{ env.ENV }}
+          cd modules/s3
           terraform init
+          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+          export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
+          export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
+          cd ../..
+
+      - name: Terraform Init
+        working-directory: .
+        run: |
+          terraform init \
+            -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
+            -reconfigure
+
+      - name: Terraform Workspace
+        working-directory: .
+        run: |
+          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
 
       - name: Terraform Plan
+        working-directory: .
         run: |
-          cd ${{ env.ENV }}
-          terraform plan
+          terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
+        if: github.ref_name != 'master'
+        working-directory: .
         run: |
-          cd ${{ env.ENV }}
-          terraform apply -auto-approve
+          terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
+
+      - name: Terraform Apply (Prod)
+        if: github.ref_name == 'master'
+        working-directory: .
+        run: |
+          terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/prod.tfvars
