@@ -58,8 +58,13 @@ jobs:
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
+
+          echo "TF_CLI_CONFIG: $TF_CLI_CONFIG"
+          cat "$TF_CLI_CONFIG" 
+          cat .terraform.lock.hcl
+
           terraform providers
-          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+          terraform workspace select ${{м env.ENV }} || terraform workspace new ${{ env.ENV }}
           terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
 
