@@ -44,9 +44,23 @@ jobs:
 
           # Установка YC CLI
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+
+          # Явно обновляем PATH
           echo "$HOME/bin" >> $GITHUB_PATH
           export PATH="$HOME/bin:$PATH"
 
+          # Диагностика — где находится yc?
+          echo "Checking if yc is available..."
+          which yc || echo "::error::yc not in PATH"
+          ls -la $HOME/bin/yc || echo "::error::yc binary not found"
+
+          # Проверяем версию yc
+          if command -v yc &> /dev/null; then
+            yc --version
+          else
+            echo "::error::YC CLI is not installed or not in PATH"
+            exit 1
+          fi
           # Определение имени сервисного аккаунта
           case "${{ env.ENV }}" in
             dev) SA_NAME="sa-terraform-state-dev" ;;
