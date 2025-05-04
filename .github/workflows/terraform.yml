@@ -57,7 +57,7 @@ jobs:
           echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
 
           echo "TF_CLI_CONFIG: $TF_CLI_CONFIG"
-          cat "$TF_CLI_CONFIG" 
+          echo $TF_CLI_CONFIG
           cat .terraform.lock.hcl
 
           terraform init \
