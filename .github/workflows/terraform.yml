@@ -34,7 +34,8 @@ jobs:
             exit 1
           fi
 
-      - name: Get AWS Credentials from Service Account
+      - name: Install Yandex CLI and Get AWS Keys
+        id: get_aws_keys
         env:
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
           IAM_TOKEN: ${{ secrets.YC_TOKEN }}
@@ -60,7 +61,7 @@ jobs:
           fi
           echo "Service Account ID: $SA_ID"
 
-          # Проверяем существующие ключи
+          # Получаем или создаём ключи
           KEY_JSON=$(yc iam access-key list --service-account-id=$SA_ID --format json)
 
           if [ "$(echo $KEY_JSON | jq length)" -gt 0 ]; then
@@ -74,19 +75,13 @@ jobs:
             AWS_SECRET_ACCESS_KEY=$(echo $KEY_JSON | jq -r .secret)
           fi
 
-          # Сохраняем в окружение
+          # Экспортируем в окружение
           echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
 
-      - name: Terraform Init
-        working-directory: .
-        env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
+      - name: Configure Terraform Yandex Mirror
         run: |
-          rm -f ~/.terraformrc
-          cat > ~/.terraformrc <<EOF
+          cat > /tmp/.terraformrc <<EOF
           provider_installation {
             network_mirror {
               url = "https://terraform-mirror.yandexcloud.net/"
@@ -97,7 +92,15 @@ jobs:
             }
           }
           EOF
-          cat ~/.terraformrc
+          echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
+
+      - name: Terraform Init
+        working-directory: .
+        env:
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: "true"
+        run: |
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
