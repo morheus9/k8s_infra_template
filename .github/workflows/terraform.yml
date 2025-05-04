@@ -49,20 +49,11 @@ jobs:
           echo "$YC_PATH" >> $GITHUB_PATH
           export PATH="$YC_PATH:$PATH"
 
-          # Диагностика — где находится yc?
-          echo "Checking if yc is available..."
-          which yc || { echo "::error::yc not in PATH"; exit 1; }
-
-          ls -la "$YC_PATH/yc" || { echo "::error::yc binary not found at $YC_PATH"; exit 1; }
-
-          # Проверяем версию yc
-          yc --version || { echo "::error::YC CLI failed to run"; exit 1; }
-
           # Определение имени сервисного аккаунта
           case "${{ env.ENV }}" in
-            dev) SA_NAME="sa-terraform-state-dev" ;;
-            test) SA_NAME="sa-terraform-state-test" ;;
-            prod) SA_NAME="sa-terraform-state-prod" ;;
+            dev) SA_NAME="sa-terraform-state-backend-dev" ;;
+            test) SA_NAME="sa-terraform-state-backend-test" ;;
+            prod) SA_NAME="sa-terraform-state-backend-prod" ;;
             *) echo "::error::Unknown ENV"; exit 1 ;;
           esac
 
