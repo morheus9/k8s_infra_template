@@ -61,8 +61,8 @@ jobs:
       - name: Terraform Apply S3
         working-directory: ./modules/s3
         run: |
-          terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
-          terraform apply -auto-approve -var-file=../../environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
+          terraform plan -var-file=./environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
+          terraform apply -auto-approve -var-file=./environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
           export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
           export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
           cd ../..
