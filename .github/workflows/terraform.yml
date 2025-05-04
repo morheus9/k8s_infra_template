@@ -42,7 +42,7 @@ jobs:
             echo "ENV=dev" >> $GITHUB_ENV
           elif [ "$BRANCH_NAME" == "test" ]; then
             echo "ENV=test" >> $GITHUB_ENV
-          elif [ "$BRANCH_NAME" == "master" ]; then
+          elif [ "$BRANCH_NAME" == "main" ]; then
             echo "ENV=prod" >> $GITHUB_ENV
           else
             echo "Unsupported branch: $BRANCH_NAME"
