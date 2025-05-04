@@ -48,6 +48,10 @@ jobs:
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
           IAM_TOKEN: ${{ secrets.YC_TOKEN }}
         run: |
+          # Установка Yandex CLI
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "$HOME/bin" >> $GITHUB_PATH
+
           # Определяем имя сервисного аккаунта на основе среды
           case "$ENV" in
             dev) SA_NAME="sa-terraform-state-dev" ;;
