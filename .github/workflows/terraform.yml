@@ -64,7 +64,7 @@ jobs:
           cat .terraform.lock.hcl
 
           terraform providers
-          terraform workspace select ${{м env.ENV }} || terraform workspace new ${{ env.ENV }}
+          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
           terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
 
