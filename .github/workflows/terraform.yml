@@ -21,20 +21,6 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      - name: Configure Terraform Yandex Mirror
-        run: |
-          cat > ~/.terraformrc <<EOF
-          provider_installation {
-            network_mirror {
-              url = "https://terraform-mirror.yandexcloud.net/"
-              include = ["registry.terraform.io/*/*"]
-            }
-            direct {
-              exclude = ["registry.terraform.io/*/*"]
-            }
-          }
-          EOF
-
       - name: Determine Environment
         run: |
           if [ "${{ github.ref_name }}" == "dev" ]; then
@@ -98,6 +84,17 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
         run: |
+          cat > ~/.terraformrc <<EOF
+          provider_installation {
+            network_mirror {
+              url = "https://terraform-mirror.yandexcloud.net/"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
