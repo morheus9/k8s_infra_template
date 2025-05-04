@@ -49,14 +49,28 @@ jobs:
             exit 1
           fi
 
-      - name: Set up AWS credentials from S3 module output (optional)
+      - name: Terraform Init for S3
+        working-directory: ./modules/s3
         run: |
-          cd modules/s3
           terraform init
+
+      - name: Terraform Workspace for S3
+        working-directory: ./modules/s3
+        run: |
           terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
-          export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
-          export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
-          cd ../..
+
+      - name: Terraform Apply S3
+        working-directory: ./modules/s3
+        run: |
+          terraform apply -auto-approve -var-file=../../environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
+            - name: Set up AWS credentials from S3 module output (optional)
+              run: |
+                cd modules/s3
+                terraform init
+                terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+                export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
+                export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
+                cd ../..
 
       - name: Terraform Init
         working-directory: .
