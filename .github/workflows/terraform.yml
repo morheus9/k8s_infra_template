@@ -95,7 +95,7 @@ jobs:
             }
           }
           EOF
-          ~/.terraformrc
+          cat ~/.terraformrc
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
