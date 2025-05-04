@@ -34,11 +34,12 @@ jobs:
             exit 1
           fi
 
-      - name: Get AWS Credentials from Service Account
-        id: get-creds
+      - name: Terraform Init
+        working-directory: .
         env:
-          FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
-          IAM_TOKEN: ${{ secrets.YC_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
         run: |
           # Установка yc CLI с обновлением PATH
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
@@ -87,13 +88,7 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
           echo "::add-mask::$AWS_ACCESS_KEY_ID"
           echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
-      - name: Terraform Init
-        working-directory: .
-        env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
-        run: |
+
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
