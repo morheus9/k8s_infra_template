@@ -26,13 +26,6 @@ jobs:
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Configure Environment Variables
-        run: |
-          echo "TF_VAR_token=${{ secrets.YC_TOKEN }}" >> ~/.bashrc
-          echo "TF_VAR_cloud_id=${{ secrets.YC_CLOUD_ID }}" >> ~/.bashrc
-          echo "TF_VAR_folder_id=${{ secrets.YC_FOLDER_ID }}" >> ~/.bashrc
-          source ~/.bashrc
-
       - name: Determine Environment
         env:
           BRANCH_NAME: ${{ github.ref_name }}
@@ -65,9 +58,17 @@ jobs:
           TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
           TF_VAR_token: ${{ secrets.YC_TOKEN }}
         run: |
-          terraform apply -auto-approve -var-file=environments/prod/prod.tfvars
-          echo "AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)" >> $GITHUB_ENV
+          sudo apt-get update && sudo apt-get install -y jq
+
+          terraform init
+          terraform workspace select prod || terraform workspace new prod
+          terraform apply -auto-approve -var-file=../../environments/prod/prod.tfvars
+
+          AWS_ACCESS_KEY_ID=$(terraform output -json | jq -r .aws_access_key_id.value)
+          AWS_SECRET_ACCESS_KEY=$(terraform output -json | jq -r .aws_secret_access_key.value)
+          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+
           cd ../..
 
       - name: Terraform Init
@@ -84,17 +85,29 @@ jobs:
 
       - name: Terraform Plan
         working-directory: .
+        env:
+          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+          TF_VAR_token: ${{ secrets.YC_TOKEN }}
         run: |
           terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
 
       - name: Terraform Apply
         if: github.ref_name != 'main'
         working-directory: .
+        env:
+          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+          TF_VAR_token: ${{ secrets.YC_TOKEN }}
         run: |
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
 
       - name: Terraform Apply (Prod)
         if: github.ref_name == 'main'
         working-directory: .
+        env:
+          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+          TF_VAR_token: ${{ secrets.YC_TOKEN }}
         run: |
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/prod.tfvars
