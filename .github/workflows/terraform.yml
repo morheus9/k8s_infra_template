@@ -43,7 +43,7 @@ jobs:
           # Устанавливаем yc CLI
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           export PATH="$HOME/bin:$PATH"
-
+          exec -l $SHELL
           # Проверяем установку
           if ! command -v yc &> /dev/null; then
             echo "::error::yc CLI installation failed"
