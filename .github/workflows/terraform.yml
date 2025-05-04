@@ -40,17 +40,17 @@ jobs:
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
           IAM_TOKEN: ${{ secrets.YC_TOKEN }}
         run: |
-          # Устанавливаем yc CLI
+          # Установка yc CLI с обновлением PATH
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           export PATH="$HOME/bin:$PATH"
           exec -l $SHELL
-          # Проверяем установку
+          # Проверка установки yc
           if ! command -v yc &> /dev/null; then
-            echo "::error::yc CLI installation failed"
+            echo "::error::yc CLI not installed!"
             exit 1
           fi
 
-          # Определяем имя сервисного аккаунта
+          # Определение имени сервисного аккаунта
           case "$ENV" in
             dev) SA_NAME="sa-terraform-state-dev" ;;
             test) SA_NAME="sa-terraform-state-test" ;;
@@ -58,35 +58,35 @@ jobs:
             *) echo "::error::Unknown ENV: $ENV"; exit 1 ;;
           esac
 
-          # Настраиваем yc
+          # Настройка yc
           yc config set token $IAM_TOKEN
           yc config set folder-id $FOLDER_ID
 
-          # Получаем ID сервисного аккаунта
+          # Получение ID сервисного аккаунта
           SA_ID=$(yc iam service-account get --name=$SA_NAME --format=json | jq -r .id)
           if [ -z "$SA_ID" ]; then
-            echo "::error::Service account $SA_NAME not found"
+            echo "::error::Service Account $SA_NAME not found"
             exit 1
           fi
-          echo "SA_ID=$SA_ID" >> $GITHUB_ENV
 
-          # Получаем или создаем ключи
-          KEY_JSON=$(yc iam access-key list --service-account-id=$SA_ID --format=json)
-          if [ $(echo "$KEY_JSON" | jq '. | length') -gt 0 ]; then
-            AWS_ACCESS_KEY_ID=$(echo "$KEY_JSON" | jq -r '.[0].key.id')
-            AWS_SECRET_ACCESS_KEY=$(echo "$KEY_JSON" | jq -r '.[0].secret')
+          # Получение ключей
+          EXISTING_KEYS=$(yc iam access-key list --service-account-id=$SA_ID --format=json)
+          if [ $(echo "$EXISTING_KEYS" | jq '. | length') -gt 0 ]; then
+            echo "Using existing keys"
+            AWS_ACCESS_KEY_ID=$(echo "$EXISTING_KEYS" | jq -r '.[0].key.id')
+            AWS_SECRET_ACCESS_KEY=$(echo "$EXISTING_KEYS" | jq -r '.[0].secret')
           else
+            echo "Creating new keys"
             NEW_KEY=$(yc iam access-key create --service-account-id=$SA_ID --description="GitHub Actions" --format=json)
             AWS_ACCESS_KEY_ID=$(echo "$NEW_KEY" | jq -r .key.id)
             AWS_SECRET_ACCESS_KEY=$(echo "$NEW_KEY" | jq -r .secret)
           fi
 
-          # Экспортируем переменные
+          # Экспорт переменных
           echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
           echo "::add-mask::$AWS_ACCESS_KEY_ID"
           echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
-
       - name: Terraform Init
         working-directory: .
         env:
