@@ -61,6 +61,9 @@ jobs:
       - name: Terraform Apply S3
         working-directory: ./modules/s3
         run: |
+          echo "TF_VAR_token=${{ secrets.YC_TOKEN }}" >> ~/.bashrc
+          echo "TF_VAR_cloud_id=${{ secrets.YC_CLOUD_ID }}" >> ~/.bashrc
+          echo "TF_VAR_folder_id=${{ secrets.YC_FOLDER_ID }}" >> ~/.bashrc
           env | grep TF_VAR_
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
           cd ../..
