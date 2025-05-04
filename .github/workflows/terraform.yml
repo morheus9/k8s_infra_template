@@ -61,8 +61,8 @@ jobs:
       - name: Terraform Apply S3
         working-directory: ./modules/s3
         run: |
+          env | grep TF_VAR_
           terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
-
           cd ../..
 
       - name: Terraform Init
