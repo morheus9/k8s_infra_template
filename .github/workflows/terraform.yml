@@ -34,71 +34,94 @@ jobs:
             exit 1
           fi
 
-      - name: Terraform Init
-        working-directory: .
+      - name: Install Yandex CLI and Get AWS Keys
+        id: get_aws_keys
         env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
+          FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+          IAM_TOKEN: ${{ secrets.YC_TOKEN }}
         run: |
-          # Установка yc CLI с обновлением PATH
+          sudo apt-get update && sudo apt-get install -y jq
+
+          # Установка YC CLI
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          export PATH="$HOME/bin:$PATH"
-          exec -l $SHELL
-          # Проверка установки yc
-          if ! command -v yc &> /dev/null; then
-            echo "::error::yc CLI not installed!"
-            exit 1
-          fi
+          echo "$HOME/bin" >> $GITHUB_PATH
+          source "$HOME/.bashrc"
 
           # Определение имени сервисного аккаунта
-          case "$ENV" in
+          case "${{ env.ENV }}" in
             dev) SA_NAME="sa-terraform-state-dev" ;;
             test) SA_NAME="sa-terraform-state-test" ;;
             prod) SA_NAME="sa-terraform-state-prod" ;;
-            *) echo "::error::Unknown ENV: $ENV"; exit 1 ;;
+            *) echo "::error::Unknown ENV"; exit 1 ;;
           esac
 
           # Настройка yc
           yc config set token $IAM_TOKEN
           yc config set folder-id $FOLDER_ID
 
-          # Получение ID сервисного аккаунта
-          SA_ID=$(yc iam service-account get --name=$SA_NAME --format=json | jq -r .id)
-          if [ -z "$SA_ID" ]; then
-            echo "::error::Service Account $SA_NAME not found"
+          # Получаем ID сервисного аккаунта
+          SA_ID=$(yc iam service-account get --name=$SA_NAME --folder-id=$FOLDER_ID --format=json | jq -r .id)
+          if [ -z "$SA_ID" ] || [ "$SA_ID" = "null" ]; then
+            echo "::error::Service account $SA_NAME not found"
             exit 1
           fi
 
-          # Получение ключей
-          EXISTING_KEYS=$(yc iam access-key list --service-account-id=$SA_ID --format=json)
-          if [ $(echo "$EXISTING_KEYS" | jq '. | length') -gt 0 ]; then
-            echo "Using existing keys"
-            AWS_ACCESS_KEY_ID=$(echo "$EXISTING_KEYS" | jq -r '.[0].key.id')
-            AWS_SECRET_ACCESS_KEY=$(echo "$EXISTING_KEYS" | jq -r '.[0].secret')
+          # Получаем или создаём статический ключ
+          KEY_JSON=$(yc iam access-key list --service-account-id=$SA_ID --format=json 2>/dev/null)
+
+          if [ $? -eq 0 ] && [ "$(echo $KEY_JSON | jq length)" -gt 0 ]; then
+            echo "Using existing key"
+            AWS_ACCESS_KEY_ID=$(echo $KEY_JSON | jq -r '.[0].key.id')
+            AWS_SECRET_ACCESS_KEY=$(echo $KEY_JSON | jq -r '.[0].secret')
           else
-            echo "Creating new keys"
-            NEW_KEY=$(yc iam access-key create --service-account-id=$SA_ID --description="GitHub Actions" --format=json)
-            AWS_ACCESS_KEY_ID=$(echo "$NEW_KEY" | jq -r .key.id)
-            AWS_SECRET_ACCESS_KEY=$(echo "$NEW_KEY" | jq -r .secret)
+            echo "Creating new static key"
+            KEY_JSON=$(yc iam access-key create --service-account-id=$SA_ID --description="auto-created-by-github-actions" --format=json)
+            AWS_ACCESS_KEY_ID=$(echo $KEY_JSON | jq -r .key.id)
+            AWS_SECRET_ACCESS_KEY=$(echo $KEY_JSON | jq -r .secret)
           fi
 
-          # Экспорт переменных
+          # Экспортируем в окружение
           echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+
+          # Скрываем из логов
           echo "::add-mask::$AWS_ACCESS_KEY_ID"
           echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
 
+      - name: Configure Terraform Yandex Mirror
+        run: |
+          cat > /tmp/.terraformrc <<EOF
+          provider_installation {
+            network_mirror {
+              url = "https://terraform-mirror.yandexcloud.net/"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
+          echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
+
+      - name: Terraform Init
+        working-directory: .
+        env:
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: "true"
+        run: |
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
+
+      - name: Terraform Workspace
+        working-directory: .
+        run: |
           terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
 
       - name: Terraform Plan
         working-directory: .
         env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
           TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
           TF_VAR_token: ${{ secrets.YC_TOKEN }}
@@ -109,8 +132,6 @@ jobs:
         if: github.ref_name != 'main'
         working-directory: .
         env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
           TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
           TF_VAR_token: ${{ secrets.YC_TOKEN }}
@@ -121,8 +142,6 @@ jobs:
         if: github.ref_name == 'main'
         working-directory: .
         env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
           TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
           TF_VAR_token: ${{ secrets.YC_TOKEN }}
