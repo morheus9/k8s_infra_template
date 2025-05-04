@@ -34,80 +34,69 @@ jobs:
             exit 1
           fi
 
-      - name: Install Yandex CLI and Get AWS Keys
-        id: get_aws_keys
+      - name: Get AWS Credentials from Service Account
+        id: get-creds
         env:
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
           IAM_TOKEN: ${{ secrets.YC_TOKEN }}
         run: |
+          # Устанавливаем yc CLI
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          echo "$HOME/bin" >> $GITHUB_PATH
-          exec -l $SHELL
+          export PATH="$HOME/bin:$PATH"
+
+          # Проверяем установку
+          if ! command -v yc &> /dev/null; then
+            echo "::error::yc CLI installation failed"
+            exit 1
+          fi
+
           # Определяем имя сервисного аккаунта
-          case "${{ env.ENV }}" in
+          case "$ENV" in
             dev) SA_NAME="sa-terraform-state-dev" ;;
             test) SA_NAME="sa-terraform-state-test" ;;
             prod) SA_NAME="sa-terraform-state-prod" ;;
-            *) echo "Unknown ENV"; exit 1 ;;
+            *) echo "::error::Unknown ENV: $ENV"; exit 1 ;;
           esac
 
+          # Настраиваем yc
           yc config set token $IAM_TOKEN
+          yc config set folder-id $FOLDER_ID
 
           # Получаем ID сервисного аккаунта
-          SA_ID=$(yc iam service-account get --name=$SA_NAME --folder-id=$FOLDER_ID --format json | jq -r .id)
-          if [ -z "$SA_ID" ] || [ "$SA_ID" = "null" ]; then
-            echo "Service account $SA_NAME not found"
+          SA_ID=$(yc iam service-account get --name=$SA_NAME --format=json | jq -r .id)
+          if [ -z "$SA_ID" ]; then
+            echo "::error::Service account $SA_NAME not found"
             exit 1
           fi
-          echo "Service Account ID: $SA_ID"
+          echo "SA_ID=$SA_ID" >> $GITHUB_ENV
 
-          # Получаем или создаём ключи
-          KEY_JSON=$(yc iam access-key list --service-account-id=$SA_ID --format json)
-
-          if [ "$(echo $KEY_JSON | jq length)" -gt 0 ]; then
-            echo "Using existing key"
-            AWS_ACCESS_KEY_ID=$(echo $KEY_JSON | jq -r '.[0].key.id')
-            AWS_SECRET_ACCESS_KEY=$(echo $KEY_JSON | jq -r '.[0].secret')
+          # Получаем или создаем ключи
+          KEY_JSON=$(yc iam access-key list --service-account-id=$SA_ID --format=json)
+          if [ $(echo "$KEY_JSON" | jq '. | length') -gt 0 ]; then
+            AWS_ACCESS_KEY_ID=$(echo "$KEY_JSON" | jq -r '.[0].key.id')
+            AWS_SECRET_ACCESS_KEY=$(echo "$KEY_JSON" | jq -r '.[0].secret')
           else
-            echo "Creating new static key"
-            KEY_JSON=$(yc iam access-key create --service-account-id=$SA_ID --description="auto-created-by-github-actions" --format json)
-            AWS_ACCESS_KEY_ID=$(echo $KEY_JSON | jq -r .key.id)
-            AWS_SECRET_ACCESS_KEY=$(echo $KEY_JSON | jq -r .secret)
+            NEW_KEY=$(yc iam access-key create --service-account-id=$SA_ID --description="GitHub Actions" --format=json)
+            AWS_ACCESS_KEY_ID=$(echo "$NEW_KEY" | jq -r .key.id)
+            AWS_SECRET_ACCESS_KEY=$(echo "$NEW_KEY" | jq -r .secret)
           fi
 
-          # Экспортируем в окружение
+          # Экспортируем переменные
           echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
-
-      - name: Configure Terraform Yandex Mirror
-        run: |
-          cat > /tmp/.terraformrc <<EOF
-          provider_installation {
-            network_mirror {
-              url = "https://terraform-mirror.yandexcloud.net/"
-              include = ["registry.terraform.io/*/*"]
-            }
-            direct {
-              exclude = ["registry.terraform.io/*/*"]
-            }
-          }
-          EOF
-          echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
+          echo "::add-mask::$AWS_ACCESS_KEY_ID"
+          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
 
       - name: Terraform Init
         working-directory: .
         env:
           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: "true"
+          AWS_EC2_METADATA_DISABLED: true
         run: |
-          echo $AWS_ACCESS_KEY_ID
-          echo $AWS_SECRET_ACCESS_KEY
-          echo $AWS_EC2_METADATA_DISABLED
           terraform init \
             -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
             -reconfigure
-
       - name: Terraform Workspace
         working-directory: .
         run: |
