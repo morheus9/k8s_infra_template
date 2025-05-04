@@ -45,23 +45,19 @@ jobs:
           # Установка YC CLI
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
 
+          # Добавляем правильный путь
           YC_PATH="$HOME/yandex-cloud/bin"
           echo "$YC_PATH" >> $GITHUB_PATH
           export PATH="$YC_PATH:$PATH"
 
-          # Определение имени сервисного аккаунта
-          case "${{ env.ENV }}" in
-            dev) SA_NAME="sa-terraform-state-backend-dev" ;;
-            test) SA_NAME="sa-terraform-state-backend-test" ;;
-            prod) SA_NAME="sa-terraform-state-backend-prod" ;;
-            *) echo "::error::Unknown ENV"; exit 1 ;;
-          esac
 
           # Настройка yc
           yc config set token $IAM_TOKEN
           yc config set folder-id $FOLDER_ID
 
-          # Получаем ID сервисного аккаунта
+          # Проверяем, существует ли сервисный аккаунт
+          SA_NAME="sa-terraform-state-backend-prod"
+
           SA_ID=$(yc iam service-account get --name=$SA_NAME --folder-id=$FOLDER_ID --format=json | jq -r .id)
           if [ -z "$SA_ID" ] || [ "$SA_ID" = "null" ]; then
             echo "::error::Service account $SA_NAME not found"
