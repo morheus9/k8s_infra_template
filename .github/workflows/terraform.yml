@@ -49,6 +49,10 @@ jobs:
           EOF
           echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
 
+      - name: Check for AWS provider usage
+        run: |
+          find . -type f -name "*.tf" -exec grep -l 'provider.*aws' {} \;
+
       - name: Terraform Init
         working-directory: .
         env:
