@@ -1,5 +1,3 @@
-[![Terraform Deploy](https://github.com/morheus9/k8s_infra_template/actions/workflows/terraform.yml/badge.svg)](https://github.com/morheus9/k8s_infra_template/actions/workflows/terraform.yml)
-
 # Terraform Template for Yandex Cloud Infrastructure
 
 This repository provides a Terraform config for deploying infrastructure for K8s on Yandex Cloud. 
@@ -61,9 +59,22 @@ cat > ~/.terraformrc <<EOF
   EOF
 ```
 
-7.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources.
+7.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
 
 ```bash
+yc config list
+yc iam key create \
+  --service-account-name my-sa \
+  --output sa-key.json
+sudo apt install xsel
+echo -e "alias pbcopy='xsel --clipboard --input'\nalias pbpaste='xsel --clipboard --output'" >> ~/.bashrc
+source ~/.bashrc
+cat sa-key.json | pbcopy
+
+Название: YC_KEY
+Тип: Variable
+Значение: содержимое файла key.b64
+
 export TF_VAR_cloud_id=$(yc config get cloud-id)
 export TF_VAR_folder_id=$(yc config get folder-id)
 export TF_VAR_token=$(yc iam create-token)
