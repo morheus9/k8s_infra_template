@@ -1,6 +1,6 @@
 provider "yandex" {
   cloud_id  = var.cloud_id
   folder_id = var.folder_id
-  token     = var.token
-  #service_account_key_file = "key.json"
+  service_account_key_file = fileexists(var.service_account_key_file) ? var.service_account_key_file : "/tmp/sa-key.json"
+  #token     = var.token
 }

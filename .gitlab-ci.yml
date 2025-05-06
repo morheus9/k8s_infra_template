@@ -1,0 +1,88 @@
+image:
+  name: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
+  entrypoint:
+    - "/usr/bin/env"
+    - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+cache:
+  key: ${CI_COMMIT_BRANCH}-${TERRAFORM_VERSION}
+  paths:
+    - .terraform
+
+variables:
+  YC_SERVICE_ACCOUNT_KEY_FILE: /tmp/sa-key.json
+
+before_script:
+  - |
+    # Определяем ENV и AWS переменные на основе ветки
+    if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      export ENV=prod
+      export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID_PROD"
+      export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY_PROD"
+    elif [ "$CI_COMMIT_BRANCH" = "dev" ]; then
+      export ENV=dev
+      export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID_DEV"
+      export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY_DEV"
+    elif [ "$CI_COMMIT_BRANCH" = "test" ]; then
+      export ENV=test
+      export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID_TEST"
+      export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY_TEST"
+    else
+      echo "Branch $CI_COMMIT_BRANCH не обрабатывается. Прерываю pipeline!"
+      exit 1
+    fi
+    echo "Using ENV=$ENV"
+  - |
+    cat <<EOF >> ~/.terraformrc 
+    provider_installation {
+      network_mirror {
+        url = "https://terraform-mirror.yandexcloud.net/"
+        include = ["registry.terraform.io/*/*"]
+      }
+      direct {
+        exclude = ["registry.terraform.io/*/*"]
+      }
+    }
+    EOF
+  - terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
+  - echo $YC_KEY > /tmp/sa-key.json
+
+stages:
+  - validate
+  - plan
+  - apply
+  - destroy
+
+validate:
+  stage: validate
+  script:
+    - terraform validate
+
+plan:
+  stage: plan
+  script:
+    - terraform plan -var-file=environments/$ENV/$ENV.tfvars -out=planfile
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - planfile
+  needs:
+    - job: validate
+
+apply:
+  stage: apply
+  script:
+    - terraform apply -auto-approve planfile
+  needs:
+    - job: plan
+  rules:
+    - when: manual
+
+destroy:
+  stage: destroy
+  script:
+    - terraform destroy -var-file=environments/$ENV/$ENV.tfvars -auto-approve
+  needs:
+    - job: plan
+  rules:
+    - when: manual

@@ -8,7 +8,6 @@ service_account_name    = "k8s-cluster-test-01-service-account"
 node_account_name       = "k8s-cluster-test-01-node-account"
 create_kms              = true
 
-
 node_groups = {
   "k8s-node-group-test-01" = {
     description = "Kubernetes node group with auto scaling"

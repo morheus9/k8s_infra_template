@@ -1,6 +1,7 @@
-variable "token" {
-  description = "Yandex Cloud OAuth api token"
+variable "service_account_key_file" {
+  description = "Yandex Cloud service_account_key_file"
   type        = string
+  default = "/tmp/sa-key.json"
 }
 
 variable "cloud_id" {
@@ -11,6 +12,12 @@ variable "cloud_id" {
 variable "folder_id" {
   description = "Yandex Cloud Folder ID"
   type        = string
+}
+
+variable "token" {
+  description = "Yandex Cloud OAuth api token"
+  type        = string
+  default     = "not-used"
 }
 
 # k8s
