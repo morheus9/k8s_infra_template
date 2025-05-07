@@ -58,22 +58,13 @@ cat > ~/.terraformrc <<EOF
   }
   EOF
 ```
-
-7.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
+7.  **Environment Variables:** Expor the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
 
 ```bash
 yc config list
 yc iam key create \
   --service-account-name my-sa \
   --output sa-key.json
-sudo apt install xsel
-echo -e "alias pbcopy='xsel --clipboard --input'\nalias pbpaste='xsel --clipboard --output'" >> ~/.bashrc
-source ~/.bashrc
-cat sa-key.json | pbcopy
-
-Название: YC_KEY
-Тип: Variable
-Значение: содержимое файла key.b64
 
 export TF_VAR_cloud_id=$(yc config get cloud-id)
 export TF_VAR_folder_id=$(yc config get folder-id)
@@ -299,6 +290,52 @@ If you used a tfvars file, specify it during the destroy operation:
 ```bash
 terraform destroy -var-file="testing.tfvars"
 ```
+## Pipeline work in Gitlab requires:
+
+1. Create SA, roles, key:
+default here - folder name
+```bash
+# SA for S3 and YDB
+yc iam service-account create --name my-s3-editor
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role storage.uploader default
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role ydb.editor default
+yc iam access-key create --service-account-name my-s3-editor
+
+key_id → Аналог AWS_ACCESS_KEY_ID (используется в access_key).
+secret → Аналог AWS_SECRET_ACCESS_KEY (используется в secret_key)
+# SA for terraform actions
+yc iam service-account create --name my-sa
+yc resource-manager folder add-access-binding --service-account-name my-sa --role editor default
+
+yc config list
+yc iam key create --service-account-name my-sa --output sa-key.json
+```
+2. Create enironments in gitlab:
+
+- AWS_ACCESS_KEY_ID_DEV
+- AWS_ACCESS_KEY_ID_TEST
+- AWS_SECRET_ACCESS_KEY_DEV
+- AWS_SECRET_ACCESS_KEY_PROD
+- AWS_SECRET_ACCESS_KEY_TEST
+- TF_VAR_cloud_id
+- TF_VAR_folder_id
+- YC_KEY
+```bash
+sudo apt install xsel
+echo -e "alias pbcopy='xsel --clipboard --input'\nalias pbpaste='xsel --clipboard --output'" >> ~/.bashrc
+source ~/.bashrc
+cat sa-key.json | pbcopy
+```
+2. Create s3 bucket for backend and YDB and table for terraform lock in the YDB:
+
+YDB table name for example : terraform-lock
+
+Type : document table
+
+One column name: LockID
+
+3. Add roles for 
+
 
 ## Resourses:
 - [Setup terraform](https://yandex.cloud/ru/docs/tutorials/infrastructure-management/terraform-quickstart)
