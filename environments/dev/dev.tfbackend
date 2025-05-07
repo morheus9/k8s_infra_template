@@ -5,5 +5,5 @@ endpoint                      =  "https://storage.yandexcloud.net"
 skip_region_validation        = true
 skip_credentials_validation   = true
 # API endpoint
-dynamodb_endpoint = https://docapi.serverless.yandexcloud.net/ru-central1/b1gesi6ievh86j5irrrf/etnr2oceu7bpp3cmc1rn
+dynamodb_endpoint = "https://docapi.serverless.yandexcloud.net/ru-central1/b1gesi6ievh86j5irrrf/etnr2oceu7bpp3cmc1rn"
 dynamodb_table = "terraform-lock"  # Using state locking

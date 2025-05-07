@@ -37,7 +37,7 @@ module "kube" {
 #     Modules for managed k8s
 
 module "addons" {
-  source = "github.com/terraform-yc-modules/terraform-yc-kubernetes-marketplace"
+  source = "github.com/terraform-yc-modules/terraform-yc-kubernetes-marketplace?ref=1.0.0"
 
   cluster_id = module.kube.cluster_id
 

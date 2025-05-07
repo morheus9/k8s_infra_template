@@ -49,9 +49,38 @@ before_script:
 
 stages:
   - validate
+  - lint
   - plan
   - apply
   - destroy
+
+lint:checkov:
+  stage: lint
+  image:
+    name: bridgecrew/checkov
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  before_script:
+    - echo OK
+  script:
+    - |
+      checkov -d . \
+        --skip-path .gitlab-ci.yml \
+        --skip-path .github/workflows/terraform.yml \
+        --skip-path README.md \
+        --skip-path modules/kube/nginx.yaml \
+        --soft-fail
+lint:tflint:
+  stage: lint
+  image:
+    name: ghcr.io/terraform-linters/tflint
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  before_script:
+    - echo OK
+  script: tflint -f compact
 
 validate:
   stage: validate

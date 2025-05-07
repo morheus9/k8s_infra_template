@@ -137,7 +137,7 @@ variable "enable_cilium_policy" {
 variable "public_access" {
   description = "Public or private Kubernetes cluster"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "allow_public_load_balancers" {

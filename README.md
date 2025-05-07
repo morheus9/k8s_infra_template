@@ -297,16 +297,16 @@ default here - folder name
 ```bash
 # SA for S3 and YDB
 yc iam service-account create --name my-s3-editor
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role kms.keys.encrypterDecrypter default
 yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role storage.uploader default
 yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role ydb.editor default
 yc iam access-key create --service-account-name my-s3-editor
+# key_id → AWS_ACCESS_KEY_ID (uses as access_key).
+# secret → AWS_SECRET_ACCESS_KEY (uses as secret_key)
 
-key_id → Аналог AWS_ACCESS_KEY_ID (используется в access_key).
-secret → Аналог AWS_SECRET_ACCESS_KEY (используется в secret_key)
 # SA for terraform actions
 yc iam service-account create --name my-sa
 yc resource-manager folder add-access-binding --service-account-name my-sa --role editor default
-
 yc config list
 yc iam key create --service-account-name my-sa --output sa-key.json
 ```
@@ -334,7 +334,7 @@ Type : document table
 
 One column name: LockID
 
-3. Add roles for 
+3. Go!
 
 
 ## Resourses:
