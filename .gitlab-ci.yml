@@ -69,8 +69,16 @@ lint:checkov:
         --skip-path .gitlab-ci.yml \
         --skip-path .github/workflows/terraform.yml \
         --skip-path README.md \
+        --skip-path modules/kube/README.md \
         --skip-path modules/kube/nginx.yaml \
+        --skip-path modules/s3/README.md \
+        --skip-path modules/s3/.gitignore \
+        --skip-path .tflint.hcl \
+        --download-external-modules true \
         --soft-fail
+#        --skip-check CKV_TF_1 \
+#        --skip-check CKV_YC_5 \
+
 lint:tflint:
   stage: lint
   image:

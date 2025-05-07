@@ -21,6 +21,11 @@ variable "token" {
 }
 
 # k8s
+variable "public_access" {
+  description = "Public or private Kubernetes cluster"
+  type        = bool
+  default     = true  # <-- Включаем публичный доступ
+}
 
 variable "master_zone" {
   description = "Zone for the master location"
@@ -42,12 +47,6 @@ variable "cluster_name" {
 
 variable "enable_cilium_policy" {
   description = "Flag to enable Cilium policies"
-  type        = bool
-  default     = true
-}
-
-variable "public_access" {
-  description = "Flag to enable public access"
   type        = bool
   default     = true
 }

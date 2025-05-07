@@ -1,4 +1,12 @@
-# Создаем бакет
+# KMS-ключ для шифрования бакета
+resource "yandex_kms_symmetric_key" "bucket_key" {
+  name         = "bucket-key-${var.bucket_name}"
+  description  = "KMS key for bucket encryption"
+  folder_id    = var.folder_id
+  rotation_period = "8760h" # 1 год
+}
+
+# Бакет с шифрованием
 resource "yandex_storage_bucket" "bucket" {
   bucket    = var.bucket_name
   max_size  = var.bucket_size
@@ -12,26 +20,13 @@ resource "yandex_storage_bucket" "bucket" {
   #lifecycle {
   #  prevent_destroy = true # защита от удаления
   #}
-}
 
-# Сервисный аккаунт для доступа к бакету
-resource "yandex_iam_service_account" "s3_user" {
-  name        = "sa-${var.bucket_name}"
-  folder_id   = var.folder_id
-  description = "Service account for S3 access to ${var.bucket_name}"
-}
-
-# Назначаем права на бакет
-resource "yandex_iam_service_account_iam_binding" "bucket_access" {
-  service_account_id = yandex_iam_service_account.s3_user.id
-  role               = "storage.editor"
-  members = [
-    "serviceAccount:${yandex_iam_service_account.s3_user.id}"
-  ]
-}
-
-# Генерируем статические ключи
-resource "yandex_iam_service_account_static_access_key" "s3_keys" {
-  service_account_id = yandex_iam_service_account.s3_user.id
-  description        = "Static key for ${var.bucket_name}"
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = yandex_kms_symmetric_key.bucket_key.id
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
 }
