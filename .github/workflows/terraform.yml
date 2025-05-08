@@ -162,7 +162,10 @@ jobs:
             }
           }
           EOF
+          # Write the service account key
           echo "${{ secrets.YC_KEY }}" > /tmp/sa-key.json
+          # Validate JSON (add this step)
+          jq . /tmp/sa-key.json
 
       - name: Cache .terraform directory
         uses: actions/cache@v4
