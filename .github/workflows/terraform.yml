@@ -257,7 +257,7 @@ jobs:
           key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve planfile
+        run: terraform apply -auto-approve -var-file="environments/$ENV/$ENV.tfvars"
 
   destroy:
     name: Terraform Destroy
