@@ -250,6 +250,12 @@ jobs:
           ${{ secrets.YC_KEY }}
           EOF
 
+      - name: Cache .terraform directory
+        uses: actions/cache@v4
+        with:
+          path: .terraform
+          key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
+
       - name: Terraform Apply
         run: terraform apply -auto-approve planfile
 

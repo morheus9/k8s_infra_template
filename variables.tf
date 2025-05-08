@@ -1,7 +1,7 @@
 variable "service_account_key_file" {
   description = "Yandex Cloud service_account_key_file"
   type        = string
-  default = "/tmp/sa-key.json"
+  default     = "/tmp/sa-key.json"
 }
 
 variable "cloud_id" {
@@ -24,7 +24,7 @@ variable "token" {
 variable "public_access" {
   description = "Public or private Kubernetes cluster"
   type        = bool
-  default     = true  # <-- Включаем публичный доступ
+  default     = true # <-- Включаем публичный доступ
 }
 
 variable "master_zone" {
@@ -97,4 +97,9 @@ variable "node_groups" {
   description = "Kubernetes node groups map of maps..."
   type        = any
   default     = {}
+}
+
+variable "network_id" {
+  description = "The ID of the cluster network."
+  type        = string
 }
