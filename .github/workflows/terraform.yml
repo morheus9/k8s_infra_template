@@ -146,8 +146,7 @@ jobs:
           fi
 
           echo "Using ENV=$ENV"
-          echo "cloud_id=$TF_CLOUD_ID" >> "$GITHUB_ENV"
-          echo "cloud_id=$TF_VAR_FOLDER_ID" >> "$GITHUB_ENV"
+
       - name: Configure terraformrc mirror
         run: |
           mkdir -p ~/.terraform.d
@@ -227,8 +226,7 @@ jobs:
           fi
 
           echo "Using ENV=$ENV"
-          echo "cloud_id=$TF_CLOUD_ID" >> "$GITHUB_ENV"
-          echo "cloud_id=$TF_VAR_FOLDER_ID" >> "$GITHUB_ENV"
+
       - name: Configure terraformrc mirror
         run: |
           mkdir -p ~/.terraform.d
