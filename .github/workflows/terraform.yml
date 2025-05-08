@@ -102,7 +102,7 @@ jobs:
               exclude = ["registry.terraform.io/*/*"]
             }
           }
-          EOFс
+          EOF
 
       - name: Cache .terraform directory
         uses: actions/cache@v4
@@ -147,6 +147,8 @@ jobs:
           fi
           echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
 
+      - name: Configure terraformrc mirror
+        run: |
           mkdir -p ~/.terraform.d
           cat <<EOF > ~/.terraformrc
           provider_installation {
@@ -159,18 +161,19 @@ jobs:
             }
           }
           EOF
-
-      - name: Terraform Plan
-        run:
-          terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
           echo "${{ secrets.YC_KEY }}" > /tmp/sa-key.json
-          terraform plan -var-file="environments/$ENV/$ENV.tfvars" -out=planfile
 
       - name: Cache .terraform directory
         uses: actions/cache@v4
         with:
           path: .terraform
           key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
+
+      - name: Terraform Plan
+        run: terraform plan -var-file="environments/$ENV/$ENV.tfvars" -out=planfile
 
       - name: Upload Terraform plan artifact
         uses: actions/upload-artifact@v4
