@@ -1,96 +1,100 @@
-name: "Terraform Deploy"
+name: Terraform Pipeline
 
 on:
   push:
     branches:
+      - main
       - dev
       - test
+  pull_request:
+    branches:
       - main
+      - dev
+      - test
+
+env:
+  YC_SERVICE_ACCOUNT_KEY_FILE: /tmp/sa-key.json
+  # Если необходимо, можно задать TERRAFORM_VERSION здесь
+  TERRAFORM_VERSION: "1.0.0"
 
 jobs:
-  terraform_backend:
-    name: "Terraform CI/CD"
+  lint_checkov:
+    name: Lint (Checkov)
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name }}
+    container:
+      image: bridgecrew/checkov:latest
+      options: --entrypoint bash
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.6.0
-
-      - name: Determine Environment
+      - name: Run Checkov
         run: |
-          if [ "${{ github.ref_name }}" == "dev" ]; then
-            echo "ENV=dev" >> $GITHUB_ENV
-          elif [ "${{ github.ref_name }}" == "test" ]; then
-            echo "ENV=test" >> $GITHUB_ENV
-          elif [ "${{ github.ref_name }}" == "main" ]; then
-            echo "ENV=prod" >> $GITHUB_ENV
-          else
-            echo "Unsupported branch: ${{ github.ref_name }}"
-            exit 1
-          fi
-
-      - name: Install Yandex CLI and Get AWS Keys
-        id: get_aws_keys
+          checkov -d . \
+            --skip-path .gitlab-ci.yml \
+            --skip-path .github/workflows/terraform.yml \
+            --skip-path README.md \
+            --skip-path modules/kube/README.md \
+            --skip-path modules/kube/nginx.yaml \
+            --skip-path modules/s3/README.md \
+            --skip-path modules/s3/.gitignore \
+            --skip-path .tflint.hcl \
+            --download-external-modules true \
+            --soft-fail
         env:
-          FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
-          IAM_TOKEN: ${{ secrets.YC_TOKEN }}
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+  lint_tflint:
+    name: Lint (TFLint)
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/terraform-linters/tflint:latest
+      options: --entrypoint bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run TFLint
         run: |
-          sudo apt-get update && sudo apt-get install -y jq
+          tflint -f compact
+        env:
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-          # Установка YC CLI
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+  validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
+      options: --entrypoint bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-          # Добавляем правильный путь
-          YC_PATH="$HOME/yandex-cloud/bin"
-          echo "$YC_PATH" >> $GITHUB_PATH
-          export PATH="$YC_PATH:$PATH"
-
-
-          # Настройка yc
-          yc config set token $IAM_TOKEN
-          yc config set folder-id $FOLDER_ID
-
-          # Проверяем, существует ли сервисный аккаунт
-          SA_NAME="sa-terraform-state-backend-prod"
-
-          SA_ID=$(yc iam service-account get --name=$SA_NAME --folder-id=$FOLDER_ID --format=json | jq -r .id)
-          if [ -z "$SA_ID" ] || [ "$SA_ID" = "null" ]; then
-            echo "::error::Service account $SA_NAME not found"
+      - name: Set up environment variables and terraformrc
+        run: |
+          # Определяем ENV и AWS переменные на основе ветки
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            export ENV=prod
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_PROD }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}"
+          elif [ "${{ github.ref_name }}" = "dev" ]; then
+            export ENV=dev
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}"
+          elif [ "${{ github.ref_name }}" = "test" ]; then
+            export ENV=test
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_TEST }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}"
+          else
+            echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
 
-          echo "Service Account ID: $SA_ID"
+          echo "Using ENV=$ENV"
 
-          # Получаем или создаём статический ключ
-          KEY_JSON=$(yc iam access-key list --service-account-id=$SA_ID --format=json 2>/dev/null)
-
-          if [ $? -eq 0 ] && [ "$(echo $KEY_JSON | jq length)" -gt 0 ]; then
-            echo "Using existing key"
-            AWS_ACCESS_KEY_ID=$(echo $KEY_JSON | jq -r '.[0].key.id')
-            AWS_SECRET_ACCESS_KEY=$(echo $KEY_JSON | jq -r '.[0].secret')
-          else
-            echo "Creating new static key"
-            KEY_JSON=$(yc iam access-key create --service-account-id=$SA_ID --description="auto-created-by-github-actions" --format=json)
-            AWS_ACCESS_KEY_ID=$(echo $KEY_JSON | jq -r .key.id)
-            AWS_SECRET_ACCESS_KEY=$(echo $KEY_JSON | jq -r .secret)
-          fi
-
-          # Экспортируем в окружение
-          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
-
-          # Скрываем из логов
-          echo "::add-mask::$AWS_ACCESS_KEY_ID"
-          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
-
-      - name: Configure Terraform Yandex Mirror
-        run: |
-          cat > /tmp/.terraformrc <<EOF
+          # Настройка terraformrc для использования зеркала провайдеров
+          mkdir -p ~/.terraform.d
+          cat <<EOF >> ~/.terraformrc 
           provider_installation {
             network_mirror {
               url = "https://terraform-mirror.yandexcloud.net/"
@@ -101,49 +105,201 @@ jobs:
             }
           }
           EOF
-          echo "TF_CLI_CONFIG=/tmp/.terraformrc" >> $GITHUB_ENV
+        env:
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+      - name: Cache .terraform directory
+        uses: actions/cache@v3
+        with:
+          path: .terraform
+          key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Init
-        working-directory: .
+        run: |
+          terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
         env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: "true"
-        run: |
-          terraform init \
-            -backend-config=environments/${{ env.ENV }}/${{ env.ENV }}.tfbackend \
-            -reconfigure
+          # Передаем AWS и ENV, которые были экспортированы в previous step
+          ENV: ${{ env.ENV }}
+      # Валидация
+      - name: Terraform Validate
+        run: terraform validate
+        env:
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-      - name: Terraform Workspace
-        working-directory: .
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
+      options: --entrypoint bash
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up environment variables and terraformrc
         run: |
-          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            export ENV=prod
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_PROD }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}"
+          elif [ "${{ github.ref_name }}" = "dev" ]; then
+            export ENV=dev
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}"
+          elif [ "${{ github.ref_name }}" = "test" ]; then
+            export ENV=test
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_TEST }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}"
+          else
+            echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
+            exit 1
+          fi
+          echo "Using ENV=$ENV"
+
+          mkdir -p ~/.terraform.d
+          cat <<EOF >> ~/.terraformrc 
+          provider_installation {
+            network_mirror {
+              url = "https://terraform-mirror.yandexcloud.net/"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
+
+          terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
+          echo "${{ secrets.YC_KEY }}" > /tmp/sa-key.json
+        env:
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+      - name: Cache .terraform directory
+        uses: actions/cache@v3
+        with:
+          path: .terraform
+          key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Plan
-        working-directory: .
-        env:
-          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
-          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-          TF_VAR_token: ${{ secrets.YC_TOKEN }}
         run: |
-          terraform plan -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
+          terraform plan -var-file=environments/$ENV/$ENV.tfvars -out=planfile
+        env:
+          ENV: ${{ env.ENV }}
+
+      - name: Upload Terraform plan artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: planfile
+          path: planfile
+          retention-days: 1
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
+      options: --entrypoint bash
+    needs: plan
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: planfile
+          path: .
+
+      - name: Set up environment variables and terraformrc
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            export ENV=prod
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_PROD }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}"
+          elif [ "${{ github.ref_name }}" = "dev" ]; then
+            export ENV=dev
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}"
+          elif [ "${{ github.ref_name }}" = "test" ]; then
+            export ENV=test
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_TEST }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}"
+          else
+            echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
+            exit 1
+          fi
+          echo "Using ENV=$ENV"
+
+          mkdir -p ~/.terraform.d
+          cat <<EOF >> ~/.terraformrc 
+          provider_installation {
+            network_mirror {
+              url = "https://terraform-mirror.yandexcloud.net/"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
+        env:
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
       - name: Terraform Apply
-        if: github.ref_name != 'main'
-        working-directory: .
+        run: terraform apply -auto-approve planfile
         env:
-          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
-          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-          TF_VAR_token: ${{ secrets.YC_TOKEN }}
-        run: |
-          terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/${{ env.ENV }}.tfvars
+          ENV: ${{ env.ENV }}
 
-      - name: Terraform Apply (Prod)
-        if: github.ref_name == 'main'
-        working-directory: .
-        env:
-          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
-          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-          TF_VAR_token: ${{ secrets.YC_TOKEN }}
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
+      options: --entrypoint bash
+    needs: plan
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up environment variables and terraformrc
         run: |
-          terraform apply -auto-approve -var-file=environments/${{ env.ENV }}/prod.tfvars
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            export ENV=prod
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_PROD }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}"
+          elif [ "${{ github.ref_name }}" = "dev" ]; then
+            export ENV=dev
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}"
+          elif [ "${{ github.ref_name }}" = "test" ]; then
+            export ENV=test
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID_TEST }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}"
+          else
+            echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
+            exit 1
+          fi
+          echo "Using ENV=$ENV"
+
+          mkdir -p ~/.terraform.d
+          cat <<EOF >> ~/.terraformrc 
+          provider_installation {
+            network_mirror {
+              url = "https://terraform-mirror.yandexcloud.net/"
+              include = ["registry.terraform.io/*/*"]
+            }
+            direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
+        env:
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin/bin
+
+      - name: Terraform Destroy
+        run: terraform destroy -var-file=environments/$ENV/$ENV.tfvars -auto-approve
+        env:
+          ENV: ${{ env.ENV }}
