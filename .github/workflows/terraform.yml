@@ -258,9 +258,14 @@ jobs:
           key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve planfile \
+        run: terraform apply \
+          -auto-approve \
           -var "cloud_id=${{ vars.CLOUD_ID }}" \
           -var "folder_id=${{ vars.FOLDER_ID }}"
+          planfile
+
+  #-var-file="environments/$ENV/$ENV.tfvars" \
+
   destroy:
     name: Terraform Destroy
     runs-on: ubuntu-latest
