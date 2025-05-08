@@ -98,8 +98,3 @@ variable "node_groups" {
   type        = any
   default     = {}
 }
-
-variable "network_id" {
-  description = "The ID of the cluster network."
-  type        = string
-}

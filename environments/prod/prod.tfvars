@@ -7,7 +7,6 @@ service_ipv4_range      = "172.22.0.0/16"
 service_account_name    = "k8s-cluster-prod-01-service-account"
 node_account_name       = "k8s-cluster-prod-01-node-account"
 create_kms              = true
-network_id              = "k8s-network-prod"
 
 node_groups = {
   "k8s-node-group-prod-01" = {
