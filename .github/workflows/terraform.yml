@@ -160,17 +160,17 @@ jobs:
           }
           EOF
 
+      - name: Terraform Plan
+        run:
           terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
           echo "${{ secrets.YC_KEY }}" > /tmp/sa-key.json
+          terraform plan -var-file="environments/$ENV/$ENV.tfvars" -out=planfile
 
       - name: Cache .terraform directory
         uses: actions/cache@v4
         with:
           path: .terraform
           key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
-
-      - name: Terraform Plan
-        run: terraform plan -var-file="environments/$ENV/$ENV.tfvars" -out=planfile
 
       - name: Upload Terraform plan artifact
         uses: actions/upload-artifact@v4
