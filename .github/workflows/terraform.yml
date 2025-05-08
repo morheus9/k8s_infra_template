@@ -144,8 +144,7 @@ jobs:
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "CLOUD_ID=${{ secrets.CLOUD_ID }}" >> "$GITHUB_ENV"
-          echo "FOLDER_ID=${{ secrets.FOLDER_ID }}" >> "$GITHUB_ENV"
+
           echo "Using ENV=$ENV"
 
       - name: Configure terraformrc mirror
@@ -227,8 +226,7 @@ jobs:
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "cloud_id=${{ secrets.CLOUD_ID }}" >> "$GITHUB_ENV"
-          echo "folder_id=${{ secrets.FOLDER_ID }}" >> "$GITHUB_ENV"
+
           echo "Using ENV=$ENV"
 
       - name: Configure terraformrc mirror
@@ -292,8 +290,7 @@ jobs:
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "CLOUD_ID=${{ secrets.CLOUD_ID }}" >> "$GITHUB_ENV"
-          echo "FOLDER_ID=${{ secrets.FOLDER_ID }}" >> "$GITHUB_ENV"
+
           echo "Using ENV=$ENV"
 
       - name: Configure terraformrc mirror
