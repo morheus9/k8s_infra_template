@@ -92,7 +92,7 @@ jobs:
       - name: Configure terraformrc mirror
         run: |
           mkdir -p ~/.terraform.d
-          cat <<EOF > ~/.terraformrc
+          cat <<EOF >> ~/.terraformrc
           provider_installation {
             network_mirror {
               url = "https://terraform-mirror.yandexcloud.net/"
@@ -103,7 +103,6 @@ jobs:
             }
           }
           EOF
-
       - name: Cache .terraform directory
         uses: actions/cache@v4
         with:
@@ -152,7 +151,7 @@ jobs:
       - name: Configure terraformrc mirror
         run: |
           mkdir -p ~/.terraform.d
-          cat <<EOF > ~/.terraformrc
+          cat <<EOF >> ~/.terraformrc
           provider_installation {
             network_mirror {
               url = "https://terraform-mirror.yandexcloud.net/"
@@ -228,8 +227,10 @@ jobs:
           fi
           echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
 
+      - name: Configure terraformrc mirror
+        run: |
           mkdir -p ~/.terraform.d
-          cat <<EOF > ~/.terraformrc
+          cat <<EOF >> ~/.terraformrc
           provider_installation {
             network_mirror {
               url = "https://terraform-mirror.yandexcloud.net/"
@@ -276,8 +277,10 @@ jobs:
           fi
           echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
 
+      - name: Configure terraformrc mirror
+        run: |
           mkdir -p ~/.terraform.d
-          cat <<EOF > ~/.terraformrc
+          cat <<EOF >> ~/.terraformrc
           provider_installation {
             network_mirror {
               url = "https://terraform-mirror.yandexcloud.net/"
