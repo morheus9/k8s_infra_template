@@ -179,6 +179,8 @@ jobs:
         run: |
           terraform plan \
             -var-file="environments/$ENV/$ENV.tfvars" \
+            -var "cloud_id=${{ vars.CLOUD_ID }}" \
+            -var "folder_id=${{ vars.FOLDER_ID }}" \
             -out=planfile
 
       - name: Upload Terraform plan artifact
@@ -256,8 +258,9 @@ jobs:
           key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve planfile
-
+        run: terraform apply -auto-approve planfile \
+          -var "cloud_id=${{ vars.CLOUD_ID }}" \
+          -var "folder_id=${{ vars.FOLDER_ID }}"
   destroy:
     name: Terraform Destroy
     runs-on: ubuntu-latest
