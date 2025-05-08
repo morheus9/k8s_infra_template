@@ -209,7 +209,7 @@ jobs:
           name: planfile
           path: .
 
-      - name: Set ENV variable and configure AWS credentials and terraformrc
+      - name: Set ENV variable, AWS credentials and create terraformrc
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
             echo "ENV=prod" >> "$GITHUB_ENV"
@@ -227,7 +227,9 @@ jobs:
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
+          echo "CLOUD_ID=${{ secrets.CLOUD_ID }}" >> "$GITHUB_ENV"
+          echo "FOLDER_ID=${{ secrets.FOLDER_ID }}" >> "$GITHUB_ENV"
+          echo "Using ENV=$ENV"
 
       - name: Configure terraformrc mirror
         run: |
@@ -242,6 +244,10 @@ jobs:
               exclude = ["registry.terraform.io/*/*"]
             }
           }
+          EOF
+          # Write the service account key
+          cat <<EOF > /tmp/sa-key.json
+          ${{ secrets.YC_KEY }}
           EOF
 
       - name: Terraform Apply
@@ -259,7 +265,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set ENV variable and configure AWS credentials and terraformrc
+      - name: Set ENV variable, AWS credentials and create terraformrc
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
             echo "ENV=prod" >> "$GITHUB_ENV"
@@ -277,7 +283,9 @@ jobs:
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
+          echo "CLOUD_ID=${{ secrets.CLOUD_ID }}" >> "$GITHUB_ENV"
+          echo "FOLDER_ID=${{ secrets.FOLDER_ID }}" >> "$GITHUB_ENV"
+          echo "Using ENV=$ENV"
 
       - name: Configure terraformrc mirror
         run: |
@@ -292,6 +300,10 @@ jobs:
               exclude = ["registry.terraform.io/*/*"]
             }
           }
+          EOF
+          # Write the service account key
+          cat <<EOF > /tmp/sa-key.json
+          ${{ secrets.YC_KEY }}
           EOF
 
       - name: Terraform Destroy
