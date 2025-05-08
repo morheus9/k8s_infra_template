@@ -72,22 +72,16 @@ jobs:
       - name: Set ENV variable and configure AWS credentials
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "ENV=prod" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_PROD }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}" >> "$GITHUB_ENV"
+            ENV="prod"
           elif [ "${{ github.ref_name }}" = "dev" ]; then
-            echo "ENV=dev" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_DEV }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}" >> "$GITHUB_ENV"
+            ENV="dev"
           elif [ "${{ github.ref_name }}" = "test" ]; then
-            echo "ENV=test" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_TEST }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}" >> "$GITHUB_ENV"
+            ENV="test"
           else
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
+          echo "ENV=$ENV" >> "$GITHUB_ENV"
 
       - name: Configure terraformrc mirror
         run: |
@@ -130,22 +124,16 @@ jobs:
       - name: Set ENV variable, AWS credentials and create terraformrc
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "ENV=prod" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_PROD }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}" >> "$GITHUB_ENV"
+            ENV="prod"
           elif [ "${{ github.ref_name }}" = "dev" ]; then
-            echo "ENV=dev" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_DEV }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}" >> "$GITHUB_ENV"
+            ENV="dev"
           elif [ "${{ github.ref_name }}" = "test" ]; then
-            echo "ENV=test" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_TEST }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}" >> "$GITHUB_ENV"
+            ENV="test"
           else
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
+          echo "ENV=$ENV" >> "$GITHUB_ENV"
 
       - name: Configure terraformrc mirror
         run: |
@@ -173,7 +161,13 @@ jobs:
         run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
 
       - name: Terraform Plan
-        run: terraform plan -var-file="environments/$ENV/$ENV.tfvars" -out=planfile
+        run: |
+          terraform plan \
+            -var-file="environments/$ENV/$ENV.tfvars" \
+            -var "cloud_id=$CLOUD_ID" \
+            -var "folder_id=$FOLDER_ID" \
+            -var "token=not-used" \
+            -out=planfile
 
       - name: Upload Terraform plan artifact
         uses: actions/upload-artifact@v4
@@ -203,22 +197,16 @@ jobs:
       - name: Set ENV variable and configure AWS credentials and terraformrc
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "ENV=prod" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_PROD }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}" >> "$GITHUB_ENV"
+            ENV="prod"
           elif [ "${{ github.ref_name }}" = "dev" ]; then
-            echo "ENV=dev" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_DEV }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}" >> "$GITHUB_ENV"
+            ENV="dev"
           elif [ "${{ github.ref_name }}" = "test" ]; then
-            echo "ENV=test" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_TEST }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}" >> "$GITHUB_ENV"
+            ENV="test"
           else
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
+          echo "ENV=$ENV" >> "$GITHUB_ENV"
 
           mkdir -p ~/.terraform.d
           cat <<EOF > ~/.terraformrc
@@ -251,22 +239,16 @@ jobs:
       - name: Set ENV variable and configure AWS credentials and terraformrc
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "ENV=prod" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_PROD }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}" >> "$GITHUB_ENV"
+            ENV="prod"
           elif [ "${{ github.ref_name }}" = "dev" ]; then
-            echo "ENV=dev" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_DEV }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}" >> "$GITHUB_ENV"
+            ENV="dev"
           elif [ "${{ github.ref_name }}" = "test" ]; then
-            echo "ENV=test" >> "$GITHUB_ENV"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_TEST }}" >> "$GITHUB_ENV"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}" >> "$GITHUB_ENV"
+            ENV="test"
           else
             echo "Branch ${{ github.ref_name }} не обрабатывается. Прерываю job!"
             exit 1
           fi
-          echo "Using ENV=$(grep '^ENV=' $GITHUB_ENV)"
+          echo "ENV=$ENV" >> "$GITHUB_ENV"
 
           mkdir -p ~/.terraform.d
           cat <<EOF > ~/.terraformrc
