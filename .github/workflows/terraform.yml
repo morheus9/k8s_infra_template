@@ -12,6 +12,15 @@ on:
       - dev
       - test
   workflow_dispatch:
+    inputs:
+      run_apply:
+        type: boolean
+        default: false
+        description: Run Terraform Apply?
+      run_destroy:
+        type: boolean
+        default: false
+        description: Run Terraform Destroy?
 
 env:
   YC_SERVICE_ACCOUNT_KEY_FILE: /tmp/sa-key.json
@@ -197,7 +206,7 @@ jobs:
       image: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
       options: --entrypoint bash
     needs: plan
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event.inputs.run_apply }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -274,7 +283,7 @@ jobs:
       image: registry.gitlab.com/gitlab-org/gitlab-build-images:terraform
       options: --entrypoint bash
     needs: plan
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event.inputs.run_apply }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -320,4 +329,8 @@ jobs:
           EOF
 
       - name: Terraform Destroy
-        run: terraform destroy -var-file="environments/$ENV/$ENV.tfvars" -auto-approve
+        run: |
+          export TF_VAR_cloud_id=${{ vars.TF_VAR_CLOUD_ID }}
+          export TF_VAR_folder_id=${{ vars.TF_VAR_FOLDER_ID }}
+          terraform destroy -var-file="environments/$ENV/$ENV.tfvars" \
+           -auto-approve
