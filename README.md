@@ -7,21 +7,74 @@ It includes modules for creating and managing various resources, such as:
 - Yandex Object Storage (S3)
 - Yandex Managed K8S Service for Kubernetes
 
-## Table of Contents
+## Pipeline work in Gitlab and github requires:
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-  - [S3 Backend Creation](#s3-backend-creation)
-  - [Creation of k8s](#creation-of-k8s)
-  - [Deploying Nginx on Kubernetes and Getting the Public IP](#deploying-nginx-on-kubernetes-and-getting-the-public-ip)
-- [Variables](#variables)
-- [Examples](#examples)
-- [Clean Up](#clean-up)
-- [Resourses](#resourses)
+1. Create SA, roles, key:
+default here - folder name
+```bash
+# SA for S3 and YDB
+yc iam service-account create --name my-s3-editor
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role kms.keys.encrypterDecrypter default
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role storage.uploader default
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role ydb.editor default
+yc iam access-key create --service-account-name my-s3-editor
+# key_id → AWS_ACCESS_KEY_ID (uses as access_key).
+# secret → AWS_SECRET_ACCESS_KEY (uses as secret_key)
 
-## Prerequisites
+# SA for terraform actions
+yc iam service-account create --name my-sa
+yc resource-manager folder add-access-binding --service-account-name my-sa --role editor default
+yc config list
+yc iam key create --service-account-name my-sa --output sa-key.json
+```
+2. Create enironments in gitlab and github:
+
+**Gitlab:**
+Secrets:
+- AWS_ACCESS_KEY_ID_DEV
+- AWS_ACCESS_KEY_ID_TEST
+- AWS_SECRET_ACCESS_KEY_DEV
+- AWS_SECRET_ACCESS_KEY_PROD
+- AWS_SECRET_ACCESS_KEY_TEST
+- TF_VAR_cloud_id
+- TF_VAR_folder_id
+- YC_KEY
+```bash
+sudo apt install xsel
+echo -e "alias pbcopy='xsel --clipboard --input'\nalias pbpaste='xsel --clipboard --output'" >> ~/.bashrc
+source ~/.bashrc
+cat sa-key.json | pbcopy
+```
+**Github:**
+Secrets:
+- AWS_ACCESS_KEY_ID_DEV
+- AWS_ACCESS_KEY_ID_PROD
+- AWS_ACCESS_KEY_ID_TEST
+- AWS_SECRET_ACCESS_KEY_DEV
+- AWS_SECRET_ACCESS_KEY_PROD
+- AWS_SECRET_ACCESS_KEY_TEST
+- YC_KEY
+```bash
+sudo apt install xsel
+echo -e "alias pbcopy='xsel --clipboard --input'\nalias pbpaste='xsel --clipboard --output'" >> ~/.bashrc
+source ~/.bashrc
+cat sa-key.json | pbcopy
+```
+Variables:
+- TF_VAR_CLOUD_ID
+- TF_VAR_FOLDER_ID
+
+2. Create **s3 bucket** for backend (See below) and **YDB** and table for terraform lock in the YDB:
+
+YDB table name for example : terraform-lock
+
+Type : document table
+
+One column name: LockID
+
+3. Go!
+
+## Manual start
 
 Before you begin, ensure you have the following:
 
@@ -60,20 +113,32 @@ cat > ~/.terraformrc <<EOF
   }
   EOF
 ```
-7.  **Environment Variables:** Expor the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
-
+7. **Create SA, roles, key:**
+default here - folder name
 ```bash
-yc config list
-yc iam key create \
-  --service-account-name my-sa \
-  --output sa-key.json
+# SA for S3 and YDB
+yc iam service-account create --name my-s3-editor
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role kms.keys.encrypterDecrypter default
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role storage.uploader default
+yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role ydb.editor default
+yc iam access-key create --service-account-name my-s3-editor
+# key_id → AWS_ACCESS_KEY_ID (uses as access_key).
+# secret → AWS_SECRET_ACCESS_KEY (uses as secret_key)
 
+# SA for terraform actions
+yc iam service-account create --name my-sa
+yc resource-manager folder add-access-binding --service-account-name my-sa --role editor default
+yc config list
+yc iam key create --service-account-name my-sa --output sa-key.json
+```
+8.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
+```bash
 export TF_VAR_cloud_id=$(yc config get cloud-id)
 export TF_VAR_folder_id=$(yc config get folder-id)
-export TF_VAR_token=$(yc iam create-token)
+# export TF_VAR_token=$(yc iam create-token)
 ```
 
-## Installation
+### Installation
 
 1.  **Clone the repository:**
 
@@ -81,12 +146,6 @@ export TF_VAR_token=$(yc iam create-token)
 git clone https://github.com/morheus9/terraform_template.git
 cd k8s_infra_template
 ```
-
-## Configuration
-
-Before deploying the infrastructure, you need to configure the variables in the Terraform modules.
-
-## Usage
 
 ### S3 Backend Creation
 
@@ -134,8 +193,7 @@ terraform destroy -var-file=environments/prod/prod.tfvars
 export AWS_ACCESS_KEY_ID=$(terraform output -raw aws_access_key_id)
 export AWS_SECRET_ACCESS_KEY=$(terraform output -raw aws_secret_access_key)
 ```
-
-### Creation of k8s
+### Creation of k8s cluster
 
 This module deploys a Kubernetes cluster in Yandex Managed Service for Kubernetes.
 
@@ -147,11 +205,6 @@ cd ../..
 terraform workspace new dev
 terraform workspace new test
 terraform workspace new prod
-
-# Before initializing the backend, you need to add editor rights to the accounts:
-sa-terraform-state-backend-dev
-sa-terraform-state-backend-test
-sa-terraform-state-backend-prod
 
 # dev
 terraform workspace select dev
@@ -240,10 +293,10 @@ terraform plan -var="zone=ru-central1-a"
 ```
 Or, use a tfvars file:
 ```bash
-terraform plan -var-file="testing.tfvars"
+terraform plan -var-file="environments/test/test.tfvars"
 ```
 ## Examples
-K8s Cluster:
+
 ```terraform
 module "kube" {
   source                  = "./modules/kube"
@@ -281,63 +334,6 @@ module "kube" {
   ]
 }
 ```
-## Clean Up
-
-To destroy the infrastructure created by Terraform, use the following command:
-
-```bash
-terraform destroy
-```
-If you used a tfvars file, specify it during the destroy operation:
-```bash
-terraform destroy -var-file="testing.tfvars"
-```
-## Pipeline work in Gitlab requires:
-
-1. Create SA, roles, key:
-default here - folder name
-```bash
-# SA for S3 and YDB
-yc iam service-account create --name my-s3-editor
-yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role kms.keys.encrypterDecrypter default
-yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role storage.uploader default
-yc resource-manager folder add-access-binding --service-account-name my-s3-editor --role ydb.editor default
-yc iam access-key create --service-account-name my-s3-editor
-# key_id → AWS_ACCESS_KEY_ID (uses as access_key).
-# secret → AWS_SECRET_ACCESS_KEY (uses as secret_key)
-
-# SA for terraform actions
-yc iam service-account create --name my-sa
-yc resource-manager folder add-access-binding --service-account-name my-sa --role editor default
-yc config list
-yc iam key create --service-account-name my-sa --output sa-key.json
-```
-2. Create enironments in gitlab:
-
-- AWS_ACCESS_KEY_ID_DEV
-- AWS_ACCESS_KEY_ID_TEST
-- AWS_SECRET_ACCESS_KEY_DEV
-- AWS_SECRET_ACCESS_KEY_PROD
-- AWS_SECRET_ACCESS_KEY_TEST
-- TF_VAR_cloud_id
-- TF_VAR_folder_id
-- YC_KEY
-```bash
-sudo apt install xsel
-echo -e "alias pbcopy='xsel --clipboard --input'\nalias pbpaste='xsel --clipboard --output'" >> ~/.bashrc
-source ~/.bashrc
-cat sa-key.json | pbcopy
-```
-2. Create s3 bucket for backend and YDB and table for terraform lock in the YDB:
-
-YDB table name for example : terraform-lock
-
-Type : document table
-
-One column name: LockID
-
-3. Go!
-
 
 ## Resourses:
 - [Setup terraform](https://yandex.cloud/ru/docs/tutorials/infrastructure-management/terraform-quickstart)
