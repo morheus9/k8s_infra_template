@@ -1,3 +1,5 @@
+[![Prod Deployment](https://github.com/morheus9/k8s_infra_template/actions/workflows/terraform.yml/badge.svg?branch=main)](https://github.com/morheus9/k8s_infra_template/actions/workflows/terraform.yml)
+
 # Terraform Template for Yandex Cloud Infrastructure
 
 This repository provides a Terraform config for deploying infrastructure for K8s on Yandex Cloud. 

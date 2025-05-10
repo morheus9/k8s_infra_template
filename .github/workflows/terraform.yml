@@ -328,6 +328,9 @@ jobs:
           ${{ secrets.YC_KEY }}
           EOF
 
+      - name: Terraform Init
+        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
+
       - name: Terraform Destroy
         run: |
           export TF_VAR_cloud_id=${{ vars.TF_VAR_CLOUD_ID }}
