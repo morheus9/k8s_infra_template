@@ -24,7 +24,6 @@ on:
 
 env:
   YC_SERVICE_ACCOUNT_KEY_FILE: /tmp/sa-key.json
-  TERRAFORM_VERSION: "1.9.8"
 
 jobs:
   lint_checkov:
@@ -72,7 +71,7 @@ jobs:
     name: Terraform Validate
     runs-on: ubuntu-latest
     container:
-      image: hashicorp/terraform:${{ env.TERRAFORM_VERSION }}
+      image: hashicorp/terraform:1.9.8
       options: --entrypoint bash
     steps:
       - name: Checkout code
@@ -128,7 +127,7 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest
     container:
-      image: hashicorp/terraform:${{ env.TERRAFORM_VERSION }}
+      image: hashicorp/terraform:1.9.8
       options: --entrypoint bash
     needs: validate
     steps:
@@ -207,7 +206,7 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     container:
-      image: hashicorp/terraform:${{ env.TERRAFORM_VERSION }}
+      image: hashicorp/terraform:1.9.8
       options: --entrypoint bash
     needs: plan
     if: ${{ github.event.inputs.run_apply }}
@@ -288,7 +287,7 @@ jobs:
     name: Terraform Destroy
     runs-on: ubuntu-latest
     container:
-      image: hashicorp/terraform:${{ env.TERRAFORM_VERSION }}
+      image: hashicorp/terraform:1.9.8
       options: --entrypoint bash
     needs: plan
     if: ${{ github.event.inputs.run_apply }}
