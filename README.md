@@ -210,18 +210,18 @@ terraform workspace new test
 terraform workspace new prod
 
 # dev
-terraform workspace select dev
 terraform init -backend-config=environments/dev/dev.tfbackend -reconfigure
+terraform workspace select dev
 terraform plan -var-file=environments/dev/dev.tfvars
 terraform apply -var-file=environments/dev/dev.tfvars
 # test
-terraform workspace select test
 terraform init -backend-config=environments/test/test.tfbackend -reconfigure
+terraform workspace select test
 terraform plan -var-file=environments/test/test.tfvars
 terraform apply -var-file=environments/test/test.tfvars
 # prod
-terraform workspace select prod
 terraform init -backend-config=environments/prod/prod.tfbackend -reconfigure
+terraform workspace select prod
 terraform plan -var-file=environments/prod/prod.tfvars
 terraform apply -var-file=environments/prod/prod.tfvars
 ```

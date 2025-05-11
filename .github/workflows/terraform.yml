@@ -181,12 +181,12 @@ jobs:
           path: .terraform
           key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
 
+      - name: Terraform Init
+        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
+
       - name: Terraform Workspace Select
         run: |
           terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
-
-      - name: Terraform Init
-        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
 
       - name: Terraform Plan
         run: |
@@ -261,12 +261,12 @@ jobs:
           ${{ secrets.YC_KEY }}
           EOF
 
+      - name: Terraform Init
+        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
+
       - name: Terraform Workspace Select
         run: |
           terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
-
-      - name: Terraform Init
-        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
 
       - name: Cache .terraform directory
         uses: actions/cache@v4
@@ -336,12 +336,12 @@ jobs:
           ${{ secrets.YC_KEY }}
           EOF
 
+      - name: Terraform Init
+        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
+
       - name: Terraform Workspace Select
         run: |
           terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
-
-      - name: Terraform Init
-        run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
 
       - name: Terraform Destroy
         run: |
