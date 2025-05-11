@@ -181,6 +181,10 @@ jobs:
           path: .terraform
           key: ${{ github.ref_name }}-${{ env.TERRAFORM_VERSION }}
 
+      - name: Terraform Workspace Select
+        run: |
+          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
+
       - name: Terraform Init
         run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
 
@@ -188,8 +192,8 @@ jobs:
         run: |
           terraform plan \
             -var-file="environments/$ENV/$ENV.tfvars" \
-            -var "cloud_id=${{ vars.CLOUD_ID }}" \
-            -var "folder_id=${{ vars.FOLDER_ID }}" \
+            -var "cloud_id=${{ vars.TF_VAR_CLOUD_ID }}" \
+            -var "folder_id=${{ vars.TF_VAR_FOLDER_ID }}" \
             -out=planfile
 
       - name: Upload Terraform plan artifact
@@ -256,6 +260,10 @@ jobs:
           cat <<EOF > /tmp/sa-key.json
           ${{ secrets.YC_KEY }}
           EOF
+
+      - name: Terraform Workspace Select
+        run: |
+          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
 
       - name: Terraform Init
         run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure
@@ -327,6 +335,10 @@ jobs:
           cat <<EOF > /tmp/sa-key.json
           ${{ secrets.YC_KEY }}
           EOF
+
+      - name: Terraform Workspace Select
+        run: |
+          terraform workspace select ${{ env.ENV }} || terraform workspace new ${{ env.ENV }}
 
       - name: Terraform Init
         run: terraform init -backend-config="environments/$ENV/$ENV.tfbackend" -reconfigure

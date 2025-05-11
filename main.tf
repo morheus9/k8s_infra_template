@@ -2,7 +2,7 @@ module "network" {
   source = "git::https://github.com/terraform-yc-modules/terraform-yc-vpc.git?ref=1.0.9"
 
   create_nat_gw = true
-  network_name  = "k8s-network--${terraform.workspace}"
+  network_name  = "k8s-network-${terraform.workspace}"
   create_vpc    = true
   private_subnets = [
     {
