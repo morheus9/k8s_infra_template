@@ -5,8 +5,8 @@
 This repository provides a Terraform config for deploying infrastructure for K8s on Yandex Cloud. 
 It includes modules for creating and managing various resources, such as:
 - Yandex Object Storage (S3)
-- Yandex Managed K8S Service for Kubernetes
-
+- Yandex Managed K8S Service for Kubernetes + addons like cilium
+- Yandex Networks
 ## Pipeline work in Gitlab and github requires:
 
 1. Create SA, roles, key:
@@ -21,6 +21,7 @@ yc iam access-key create --service-account-name my-s3-editor
 # key_id → AWS_ACCESS_KEY_ID (uses as access_key).
 # secret → AWS_SECRET_ACCESS_KEY (uses as secret_key)
 
+export YC_KEY=$(cat /tmp/sa-key.json)
 # SA for terraform actions
 yc iam service-account create --name my-sa
 yc resource-manager folder add-access-binding --service-account-name my-sa --role editor default
@@ -129,10 +130,12 @@ yc iam access-key create --service-account-name my-s3-editor
 yc iam service-account create --name my-sa
 yc resource-manager folder add-access-binding --service-account-name my-sa --role editor default
 yc config list
-yc iam key create --service-account-name my-sa --output sa-key.json
+yc iam key create --service-account-name my-sa --output /tmp/sa-key.json
 ```
 8.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
 ```bash
+yc iam key create --service-account-name my-sa --output /tmp/sa-key.json
+export YC_KEY=$(cat /tmp/sa-key.json)
 export TF_VAR_cloud_id=$(yc config get cloud-id)
 export TF_VAR_folder_id=$(yc config get folder-id)
 # export TF_VAR_token=$(yc iam create-token)
@@ -214,12 +217,12 @@ terraform apply -var-file=environments/dev/dev.tfvars
 # test
 terraform workspace select test
 terraform init -backend-config=environments/test/test.tfbackend -reconfigure
-terraform plan -var-file=environments/dev/dev.tfvars
+terraform plan -var-file=environments/test/test.tfvars
 terraform apply -var-file=environments/test/test.tfvars
 # prod
 terraform workspace select prod
 terraform init -backend-config=environments/prod/prod.tfbackend -reconfigure
-terraform plan -var-file=environments/dev/dev.tfvars
+terraform plan -var-file=environments/prod/prod.tfvars
 terraform apply -var-file=environments/prod/prod.tfvars
 ```
 
@@ -252,7 +255,6 @@ cd tf/modules/kube
 ```bash
 kubectl apply -f nginx.yaml
 ```
-    
     This will create:
     *   A `Deployment` named `nginx-deployment` that runs a single replica of Nginx.
     *   A `Service` named `nginx-service` that exposes the Nginx deployment on port 80.
@@ -269,7 +271,7 @@ kubectl get ingress nginx-ingress
 4.  **Get the external IP address:**  Retrieve the external IP address assigned to the Nginx ingress using `jsonpath`.
 
 ```bash
-    kubectl get ingress nginx-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+kubectl get ingress nginx-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
     
 5.  **Access Nginx:** Open your web browser and navigate to the external IP address obtained in the previous step. You should see the default Nginx welcome page. If you don't see the Nginx welcome page, ensure the following:
@@ -294,45 +296,6 @@ terraform plan -var="zone=ru-central1-a"
 Or, use a tfvars file:
 ```bash
 terraform plan -var-file="environments/test/test.tfvars"
-```
-## Examples
-
-```terraform
-module "kube" {
-  source                  = "./modules/kube"
-  node_groups_defaults    = var.node_groups_defaults
-  node_groups             = var.node_groups
-  enable_outgoing_traffic = var.enable_outgoing_traffic
-  cluster_name            = var.cluster_name
-  network_id              = module.kube.k8s_network_id
-  enable_cilium_policy    = var.enable_cilium_policy
-  public_access           = var.public_access
-  service_ipv4_range      = var.service_ipv4_range
-  service_account_name    = var.service_account_name
-  node_account_name       = var.node_account_name
-  create_kms              = var.create_kms
-
-  #cluster_version      = "1.28"
-  #release_channel      = "REGULAR"
-  #folder_id            = "b1g4cr5d305a2bsm2im0"
-  #create_kms           = true
-  #cluster_ipv4_range   = "172.19.0.0/16"
-
-  master_locations = [
-    {
-      zone      = var.master_zone
-      subnet_id = module.kube.k8s_subnet_ru_central1_a_id
-    }
-  ]
-
-  master_maintenance_windows = [
-    {
-      day        = "monday"
-      start_time = "20:00"
-      duration   = "3h"
-    }
-  ]
-}
 ```
 
 ## Resourses:

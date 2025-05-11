@@ -7,25 +7,3 @@ service_ipv4_range      = "172.22.0.0/16"
 service_account_name    = "k8s-cluster-prod-01-service-account"
 node_account_name       = "k8s-cluster-prod-01-node-account"
 create_kms              = true
-
-node_groups = {
-  "k8s-node-group-prod-01" = {
-    description = "Kubernetes node group with auto scaling"
-    auto_scale = {
-      min     = 2
-      max     = 4
-      initial = 2
-    }
-    instance_template = {
-      platform_id = "standard-v2"
-      resources = {
-        memory = 4 # GB
-        cores  = 2 # vCPU
-      }
-      boot_disk = {
-        type = "network-hdd"
-        size = 50 # GB
-      }
-    }
-  }
-}

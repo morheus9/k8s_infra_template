@@ -1,28 +1,58 @@
+module "network" {
+  source        = "github.com/terraform-yc-modules/terraform-yc-vpc/?ref=1.0.9"
+  create_nat_gw = true
+  network_name  = "k8s-network--${terraform.workspace}"
+  create_vpc    = true
+  private_subnets = [
+    {
+      "zone"           = "ru-central1-a"
+      "v4_cidr_blocks" = ["10.10.0.0/24"],
+    },
+    {
+      "zone"           = "ru-central1-b"
+      "v4_cidr_blocks" = ["10.20.0.0/24"],
+    },
+    {
+      "zone"           = "ru-central1-d"
+      "v4_cidr_blocks" = ["10.30.0.0/24"],
+    },
+  ]
+}
+
 module "kube" {
-  source                  = "./modules/kube"
+  source = "github.com/terraform-yc-modules/terraform-yc-kubernetes/?ref=1.1.2"
+
   node_groups_defaults    = var.node_groups_defaults
-  node_groups             = var.node_groups
   enable_outgoing_traffic = var.enable_outgoing_traffic
   cluster_name            = var.cluster_name
-  network_id              = module.kube.k8s_network_id
   enable_cilium_policy    = var.enable_cilium_policy
   public_access           = var.public_access
   service_ipv4_range      = var.service_ipv4_range
   service_account_name    = var.service_account_name
   node_account_name       = var.node_account_name
   create_kms              = var.create_kms
+  network_id              = module.network.vpc_id
+  # node_groups             = var.node_groups
 
-  #cluster_version      = "1.28"
-  #release_channel      = "REGULAR"
-  #folder_id            = "b1g4cr5d305a2bsm2im0"
-  #create_kms           = true
-  #cluster_ipv4_range   = "172.19.0.0/16"
+  # cluster_version      = "1.28"
+  # release_channel      = "REGULAR"
+  # folder_id            = "b1g4cr5d305a2bsm2im0"
+  # create_kms           = true
+  # cluster_ipv4_range   = "172.19.0.0/16"
 
   master_locations = [
     {
-      zone      = var.master_zone
-      subnet_id = module.kube.k8s_subnet_ru_central1_a_id
-    }
+      zone      = module.network.private_subnets["10.10.0.0/24"].zone
+      subnet_id = module.network.private_subnets["10.10.0.0/24"].subnet_id
+    },
+    {
+      zone      = module.network.private_subnets["10.20.0.0/24"].zone
+      subnet_id = module.network.private_subnets["10.20.0.0/24"].subnet_id
+    },
+    {
+      zone      = module.network.private_subnets["10.30.0.0/24"].zone
+      subnet_id = module.network.private_subnets["10.30.0.0/24"].subnet_id
+    },
   ]
 
   master_maintenance_windows = [
@@ -32,6 +62,23 @@ module "kube" {
       duration   = "3h"
     }
   ]
+
+  node_groups = {
+    "yc-k8s-ng-01" = {
+      description = "Kubernetes nodes group 01 with auto scaling"
+      auto_scale = {
+        min     = 2
+        max     = 4
+        initial = 2
+      }
+    },
+    #    "yc-k8s-ng-02" = {
+    #      description = "Kubernetes nodes group 02 with fixed size scaling"
+    #      fixed_scale = {
+    #        size = 3
+    #      }
+    #    }
+  }
 }
 
 #     Modules for managed k8s
@@ -144,8 +191,8 @@ module "addons" {
   }
 
   gateway_api = {
-    folder_id           = "xxx"
-    vpc_network_id      = "xxx"
+    folder_id = "xxx"
+    #vpc_network_id      = "xxx"
     subnet_id_a         = "xxx"
     subnet_id_b         = "xxx"
     subnet_id_d         = "xxx"
