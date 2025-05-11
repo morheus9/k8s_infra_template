@@ -99,7 +99,7 @@ yc init
 ```
     This command will guide you through the process of obtaining an OAuth token and logging in under the required service account.
     
-6.  **Terraform Provider Configuration:** Configure Terraform to use the Yandex Cloud provider. Create or edit the `~/.terraformrc` file with the following content:
+5.  **Terraform Provider Configuration:** Configure Terraform to use the Yandex Cloud provider. Create or edit the `~/.terraformrc` file with the following content:
 
 ```bash
 cat > ~/.terraformrc <<EOF
@@ -114,7 +114,7 @@ cat > ~/.terraformrc <<EOF
   }
   EOF
 ```
-7. **Create SA, roles, key:**
+6. **Create SA, roles, key:**
 default here - folder name
 ```bash
 # SA for S3 and YDB
@@ -132,7 +132,7 @@ yc resource-manager folder add-access-binding --service-account-name my-sa --rol
 yc config list
 yc iam key create --service-account-name my-sa --output /tmp/sa-key.json
 ```
-8.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
+7.  **Environment Variables:** Export the necessary environment variables for Terraform to access your Yandex Cloud resources and add to gitlab
 ```bash
 yc iam key create --service-account-name my-sa --output /tmp/sa-key.json
 export YC_KEY=$(cat /tmp/sa-key.json)
