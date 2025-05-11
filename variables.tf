@@ -27,12 +27,6 @@ variable "public_access" {
   default     = true # <-- Включаем публичный доступ
 }
 
-variable "master_zone" {
-  description = "Zone for the master location"
-  type        = string
-  default     = "central1"
-}
-
 variable "enable_outgoing_traffic" {
   description = "Flag to enable outgoing traffic"
   type        = bool
@@ -92,9 +86,4 @@ variable "node_groups_defaults" {
     ipv4          = true
     ipv6          = false
   }
-}
-variable "node_groups" {
-  description = "Kubernetes node groups map of maps..."
-  type        = any
-  default     = {}
 }

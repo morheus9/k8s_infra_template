@@ -1,4 +1,3 @@
-master_zone             = "ru-central1-a" # Multi-zone
 enable_outgoing_traffic = true
 cluster_name            = "k8s-cluster-prod-01"
 enable_cilium_policy    = true
