@@ -1,5 +1,6 @@
 module "network" {
-  source        = "github.com/terraform-yc-modules/terraform-yc-vpc/?ref=1.0.9"
+  source = "git::https://github.com/terraform-yc-modules/terraform-yc-vpc.git?ref=1.0.9 "
+
   create_nat_gw = true
   network_name  = "k8s-network--${terraform.workspace}"
   create_vpc    = true
@@ -20,7 +21,7 @@ module "network" {
 }
 
 module "kube" {
-  source = "github.com/terraform-yc-modules/terraform-yc-kubernetes/?ref=1.1.2"
+  source = "git::https://github.com/terraform-yc-modules/terraform-yc-kubernetes.git?ref=1.1.2 "
 
   node_groups_defaults    = var.node_groups_defaults
   enable_outgoing_traffic = var.enable_outgoing_traffic
@@ -84,7 +85,7 @@ module "kube" {
 #     Modules for managed k8s
 
 module "addons" {
-  source = "github.com/terraform-yc-modules/terraform-yc-kubernetes-marketplace?ref=1.0.0"
+  source = "git::https://github.com/terraform-yc-modules/terraform-yc-kubernetes-marketplace.git?ref=1.0.0 "
 
   cluster_id = module.kube.cluster_id
 
